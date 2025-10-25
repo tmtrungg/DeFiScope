@@ -88,7 +88,7 @@ This project is released under the MIT License.
 Please cite the paper as follows if you use the data or code from DeFiScope:
 ```
 @inproceedings{zhong2025defiscope,
-      title={Detecting Various DeFi Price Manipulations with LLM Reasoning}, 
+      title={{Detecting Various DeFi Price Manipulations with LLM Reasoning}}, 
       author={Zhong, Juantao and Wu, Daoyuan and Liu, Ye and Xie, Maoyi and Liu, Yang and Li, Yi and Liu, Ning},
       booktitle={Proc. IEEE/ACM Automated Software Engineering (ASE)},
       year={2025}
