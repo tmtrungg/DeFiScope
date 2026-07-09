@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeFiScope Explained — From DeFi Knowledge to a Fine-Tuned Phi-3</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1a202c; --muted:#5a6577; --line:#e2e8f0;
+    --defi:#2563eb; --defi-bg:#eff6ff;
+    --ai:#7c3aed;   --ai-bg:#f5f3ff;
+    --data:#ea580c; --data-bg:#fff7ed;
+    --ok:#16a34a;   --ok-bg:#f0fdf4;
+    --bad:#dc2626;  --bad-bg:#fef2f2;
+    --warn-bg:#fffbeb; --warn-line:#f59e0b;
+    --code-bg:#f6f8fa; --th-bg:#f8fafc;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f141b; --fg:#e6edf3; --muted:#9aa7b4; --line:#2d3748;
+      --defi:#60a5fa; --defi-bg:#12203a;
+      --ai:#a78bfa;   --ai-bg:#231b3a;
+      --data:#fb923c; --data-bg:#33200e;
+      --ok:#4ade80;   --ok-bg:#0e2a18;
+      --bad:#f87171;  --bad-bg:#331214;
+      --warn-bg:#332608; --warn-line:#d97706;
+      --code-bg:#161d27; --th-bg:#161d27;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  main{max-width:920px;margin:0 auto;padding:24px 20px 80px}
+  h1{font-size:1.9em;line-height:1.25;margin:.4em 0 .2em}
+  h2{font-size:1.45em;margin:2.2em 0 .5em;padding-top:.6em;border-top:3px solid var(--line)}
+  h3{font-size:1.15em;margin:1.6em 0 .4em}
+  h4{font-size:1em;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  .sub{color:var(--muted)}
+  .tag{display:inline-block;font-size:.72em;font-weight:600;letter-spacing:.03em;
+       padding:1px 8px;border-radius:10px;vertical-align:2px;margin-left:6px}
+  .tag.paper{background:var(--defi-bg);color:var(--defi)}
+  .tag.repo{background:var(--data-bg);color:var(--data)}
+  .tag.ai{background:var(--ai-bg);color:var(--ai)}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
+  code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;
+      padding:12px 14px;overflow-x:auto;line-height:1.5}
+  pre code{background:none;padding:0}
+  table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em}
+  .tblwrap{overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--th-bg)}
+  .box{border:1px solid var(--line);border-left:5px solid var(--line);
+       border-radius:8px;padding:12px 16px;margin:1.1em 0}
+  .box .bt{font-weight:700;margin-bottom:4px}
+  .box.insight{border-left-color:var(--ok);background:var(--ok-bg)}
+  .box.warn{border-left-color:var(--warn-line);background:var(--warn-bg)}
+  .box.example{border-left-color:var(--defi);background:var(--defi-bg)}
+  .box.ai{border-left-color:var(--ai);background:var(--ai-bg)}
+  .box.confusion{border-left-color:var(--bad);background:var(--bad-bg)}
+  figure{margin:1.4em 0;text-align:center}
+  figure svg{width:100%;height:auto;max-width:860px}
+  figcaption{font-size:.85em;color:var(--muted);margin-top:6px;text-align:center}
+  .svgtxt{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;fill:var(--fg)}
+  .svgsm{font:11.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;fill:var(--muted)}
+  .svgb{font-weight:700}
+  .toc{background:var(--th-bg);border:1px solid var(--line);border-radius:10px;padding:14px 22px;margin:1.4em 0}
+  .toc ol{margin:.3em 0 .3em 1.1em;padding:0}
+  .toc li{margin:.25em 0}
+  a{color:var(--defi)}
+  .steps{counter-reset:step}
+  .step{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:1.2em 0;counter-increment:step}
+  .step>h3{margin:.1em 0 .5em}
+  .step>h3::before{content:"Step " counter(step) " — ";color:var(--data)}
+  .kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:.95em}
+  .kv b{white-space:nowrap}
+  .center{text-align:center}
+  .small{font-size:.88em}
+  .num{font-variant-numeric:tabular-nums}
+  hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>From DeFi Knowledge to a Fine-Tuned Model</h1>
+<p class="sub">How the DeFiScope authors turned their DeFi findings into the fine-tuned Phi-3 you are running,
+how they proved it works, and why the number to expect is <b>0.66</b>.<br>
+Written for a reader with a little DeFi knowledge and almost no AI background. Every claim is tagged with its source:
+<span class="tag paper">paper §…</span> = <code>defiscope.pdf</code>, <span class="tag repo">repo</span> = a file in this repository.</p>
+
+<div class="toc">
+<b>Contents</b>
+<ol>
+  <li><a href="#story">The whole story in one picture</a></li>
+  <li><a href="#defi">DeFi from zero — the six ideas you need</a></li>
+  <li><a href="#findings">The paper's DeFi findings (what they discovered &amp; claim)</a></li>
+  <li><a href="#ai">AI from zero — the five ideas you need</a></li>
+  <li><a href="#bridge">The bridge: turning DeFi knowledge into a fine-tune, step by step</a></li>
+  <li><a href="#proof">How they proved the fine-tuning works (the evidence ladder)</a></li>
+  <li><a href="#inference">How the fine-tuned Phi-3 produces 0.66 in this repo</a></li>
+  <li><a href="#faq">Common confusions, answered</a></li>
+  <li><a href="#glossary">Glossary &amp; where everything lives</a></li>
+</ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="story">1. The whole story in one picture</h2>
+
+<p>DeFiScope detects <b>price-manipulation attacks</b>: transactions where an attacker deliberately
+distorts a token's price inside a DeFi protocol and profits from the distortion. The paper's chain of
+reasoning, which the rest of this document unpacks piece by piece:</p>
+
+<figure>
+<svg viewBox="0 0 860 210" role="img" aria-label="Overview chain">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+  <rect x="8"   y="30" width="190" height="86" rx="10" fill="var(--defi-bg)" stroke="var(--defi)"/>
+  <text x="103" y="56" text-anchor="middle" class="svgtxt svgb">DeFi finding</text>
+  <text x="103" y="76" text-anchor="middle" class="svgsm">44.2% of attacks use custom</text>
+  <text x="103" y="92" text-anchor="middle" class="svgsm">price formulas — old tools miss them</text>
+
+  <rect x="228" y="30" width="190" height="86" rx="10" fill="var(--ok-bg)" stroke="var(--ok)"/>
+  <text x="323" y="56" text-anchor="middle" class="svgtxt svgb">Key insight</text>
+  <text x="323" y="76" text-anchor="middle" class="svgsm">price DIRECTION is enough, and it</text>
+  <text x="323" y="92" text-anchor="middle" class="svgsm">follows from formula + balance changes</text>
+
+  <rect x="448" y="30" width="190" height="86" rx="10" fill="var(--ai-bg)" stroke="var(--ai)"/>
+  <text x="543" y="56" text-anchor="middle" class="svgtxt svgb">Fine-tuned LLM</text>
+  <text x="543" y="76" text-anchor="middle" class="svgsm">teach Phi-3 to read pricing code</text>
+  <text x="543" y="92" text-anchor="middle" class="svgsm">and output the direction</text>
+
+  <rect x="668" y="30" width="185" height="86" rx="10" fill="var(--data-bg)" stroke="var(--data)"/>
+  <text x="760" y="56" text-anchor="middle" class="svgtxt svgb">Rule-based detector</text>
+  <text x="760" y="76" text-anchor="middle" class="svgsm">match 8 attack patterns</text>
+  <text x="760" y="92" text-anchor="middle" class="svgsm">→ verdict True / False</text>
+
+  <line x1="198" y1="73" x2="226" y2="73" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="418" y1="73" x2="446" y2="73" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="638" y1="73" x2="666" y2="73" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+
+  <text x="430" y="150" text-anchor="middle" class="svgtxt">Result on the 95-attack benchmark (D1): private GPT-3.5 fine-tune → recall <tspan class="svgb">0.80</tspan> (unreleased);</text>
+  <text x="430" y="172" text-anchor="middle" class="svgtxt">the <tspan class="svgb">released Phi-3 fine-tune → recall 0.66</tspan> — the model this repo runs, and our baseline.</text>
+</svg>
+<figcaption>The four-link chain. Sections 2–3 explain link 1–2, section 4–5 explain link 3, sections 6–7 explain the rest.</figcaption>
+</figure>
+
+<div class="box insight"><div class="bt">The single most important design fact</div>
+The LLM never decides "this is an attack." It answers one narrow question per step of a transaction:
+<i>"did this token's price go up or down?"</i> Everything else — reconstructing what the transaction did,
+matching attack patterns, the final verdict — is ordinary, deterministic Python. Think of a smoke detector:
+the LLM is the <b>smoke sensor</b>, the hand-written rules are the <b>alarm circuit</b>. When you evaluate
+this baseline, you are evaluating the sensor inside that fixed circuit.</div>
+
+<!-- ================================================================ -->
+<h2 id="defi">2. DeFi from zero — the six ideas you need</h2>
+
+<h3>2.1 Blockchain, accounts, and "user invocations" <span class="tag paper">§II</span></h3>
+<p>A blockchain is a shared ledger. Two kinds of accounts live on it:
+<b>EOAs</b> (externally-owned accounts — a person with a private key) and
+<b>contract accounts</b> (<b>CAs</b> — programs called <i>smart contracts</i>, whose code executes automatically).
+A <b>transaction</b> is one atomic action submitted by an EOA. Inside one transaction, contracts can call
+other contracts many times — these inner calls are <b>internal transactions</b>.</p>
+<p>The paper defines a <b>user invocation</b> as one internal call from the attacker-controlled contracts into
+the outside world. One attack transaction typically contains many user invocations (borrow, swap, deposit, …),
+and <b>DeFiScope analyzes each user invocation separately</b> — it is the unit everything below works on.</p>
+
+<h3>2.2 Tokens and liquidity pools</h3>
+<p>A <b>token</b> (WETH, USDT, …) is a balance that contracts track. A <b>liquidity pool</b> is a smart contract
+holding reserves of two (or more) tokens that anyone can trade against — a robot money-changer with a shared pot.
+You put token X in; it gives token Y out. There is no human market-maker; a <b>formula</b> decides the exchange rate.</p>
+
+<h3>2.3 Price models — prices are formulas over balances <span class="tag paper">§II-A</span></h3>
+<p>This is the heart of everything. In DeFi, a token's price inside a protocol is not looked up from a market feed —
+it is <b>computed by a formula whose inputs are token balances</b>. The paper calls such a formula a <b>price model</b>.
+Three families:</p>
+
+<h4>(a) CPMM — Constant Product Market Maker (Uniswap and most DEXes)</h4>
+<p>The pool holds <code>x</code> of token X and <code>y</code> of token Y and enforces
+<b><code>x · y = k</code></b> (a constant). The price of X, measured in Y, is simply <b><code>P(X) = y / x</code></b>.
+A worked example with real numbers:</p>
+
+<div class="box example"><div class="bt">Worked example — one swap moves the price</div>
+Pool holds <b>10 ETH</b> and <b>20,000 USDT</b> → k = 200,000, price of ETH = 20,000 / 10 = <b>2,000 USDT</b>.<br>
+A trader sends in <b>10,000 USDT</b>. The pool must keep x·y = 200,000, so ETH balance becomes
+200,000 / 30,000 = <b>6.67 ETH</b> — the trader receives 3.33 ETH.<br>
+New price of ETH = 30,000 / 6.67 = <b>4,500 USDT</b>.
+<br><br>
+Now look only at the <b>balance changes</b>: USDT in pool <b>↑ +10,000</b>, ETH in pool <b>↓ −3.33</b>.
+From those two arrows alone, the formula forces: <b>price of ETH ↑, price of USDT (in ETH) ↓</b>.
+No market data needed — <i>direction follows from the formula plus the balance deltas</i>. Remember this; it becomes the labeling trick in §5.</div>
+
+<figure>
+<svg viewBox="0 0 520 300" role="img" aria-label="CPMM curve">
+  <line x1="60" y1="260" x2="480" y2="260" stroke="var(--muted)"/>
+  <line x1="60" y1="260" x2="60"  y2="16"  stroke="var(--muted)"/>
+  <text x="270" y="292" text-anchor="middle" class="svgsm">ETH in pool (x)</text>
+  <text x="20" y="140" transform="rotate(-90 20 140)" text-anchor="middle" class="svgsm">USDT in pool (y)</text>
+  <polyline fill="none" stroke="var(--defi)" stroke-width="2.5"
+    points="160,20 180,60 193,80 220,110 260,140 320,168 380,185 460,200"/>
+  <text x="430" y="185" class="svgsm">x · y = 200,000</text>
+  <circle cx="260" cy="140" r="6" fill="var(--ok)"/>
+  <text x="272" y="136" class="svgtxt">before: (10, 20,000) — P(ETH)=2,000</text>
+  <circle cx="193" cy="80" r="6" fill="var(--bad)"/>
+  <text x="205" y="70" class="svgtxt">after: (6.67, 30,000) — P(ETH)=4,500</text>
+  <path d="M 252,132 Q 225,110 202,90" fill="none" stroke="var(--data)" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="150" y="118" class="svgsm" fill="var(--data)">swap 10,000 USDT in</text>
+</svg>
+<figcaption>A CPMM pool lives on the curve x·y=k. Every swap slides along the curve — and the slope (the price) changes with it.</figcaption>
+</figure>
+
+<h4>(b) Stableswap invariant (Curve)</h4>
+<p>A more complex formula used for tokens that <i>should</i> trade near 1:1 (e.g. two dollar-stablecoins).
+Its curve is nearly flat in the middle (price barely moves for normal trades) and behaves like CPMM at the
+extremes. You don't need its equation — just know it is a second <i>standard</i>, well-known formula.</p>
+
+<h4>(c) Custom price models — where the trouble starts</h4>
+<p>Any protocol can invent its own pricing formula. The paper's motivating case is <b>UwULend</b> (a lending
+protocol, attacked in June 2024 for <b>$19M</b>): it priced the token sUSDe as the <b>median of 10 numbers</b> —
+the <i>instantaneous</i> price of USDe in 5 different pools, plus the <i>EMA</i> (exponential moving average — a slow,
+smoothed value that stays constant within a block) price from the same 5 pools.</p>
+
+<figure>
+<svg viewBox="0 0 860 260" role="img" aria-label="UwULend median attack">
+  <text x="215" y="20" text-anchor="middle" class="svgtxt svgb">Before the attack</text>
+  <line x1="60" y1="40" x2="60" y2="210" stroke="var(--muted)"/>
+  <text x="52" y="50" text-anchor="end" class="svgsm">price</text>
+  <!-- before: 5 EMA (gray) and 5 IP (orange) clustered; median line -->
+  <circle cx="120" cy="95"  r="7" fill="var(--muted)"/><circle cx="150" cy="105" r="7" fill="var(--muted)"/>
+  <circle cx="180" cy="90"  r="7" fill="var(--muted)"/><circle cx="210" cy="110" r="7" fill="var(--muted)"/>
+  <circle cx="240" cy="100" r="7" fill="var(--muted)"/>
+  <circle cx="135" cy="112" r="7" fill="var(--data)"/><circle cx="165" cy="98"  r="7" fill="var(--data)"/>
+  <circle cx="195" cy="118" r="7" fill="var(--data)"/><circle cx="225" cy="93"  r="7" fill="var(--data)"/>
+  <circle cx="255" cy="107" r="7" fill="var(--data)"/>
+  <line x1="90" y1="103" x2="290" y2="103" stroke="var(--ok)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <text x="296" y="107" class="svgsm" fill="var(--ok)">median ≈ fair price</text>
+  <text x="120" y="235" class="svgsm"><tspan fill="var(--muted)">●</tspan> 5 EMA prices (frozen in-block)   <tspan fill="var(--data)">●</tspan> 5 instantaneous prices</text>
+
+  <text x="640" y="20" text-anchor="middle" class="svgtxt svgb">During the attack</text>
+  <line x1="480" y1="40" x2="480" y2="210" stroke="var(--muted)"/>
+  <!-- after: EMAs unchanged; IPs pushed down; median falls to top of IP cluster -->
+  <circle cx="540" cy="95"  r="7" fill="var(--muted)"/><circle cx="570" cy="105" r="7" fill="var(--muted)"/>
+  <circle cx="600" cy="90"  r="7" fill="var(--muted)"/><circle cx="630" cy="110" r="7" fill="var(--muted)"/>
+  <circle cx="660" cy="100" r="7" fill="var(--muted)"/>
+  <circle cx="555" cy="175" r="7" fill="var(--data)"/><circle cx="585" cy="182" r="7" fill="var(--data)"/>
+  <circle cx="615" cy="170" r="7" fill="var(--data)"/><circle cx="645" cy="185" r="7" fill="var(--data)"/>
+  <circle cx="675" cy="178" r="7" fill="var(--data)"/>
+  <line x1="510" y1="140" x2="710" y2="140" stroke="var(--bad)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <text x="716" y="144" class="svgsm" fill="var(--bad)">median falls</text>
+  <path d="M 600,120 L 600,160" stroke="var(--bad)" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="608" y="152" class="svgsm" fill="var(--bad)">attacker dumps USDe into all 5 pools</text>
+  <text x="540" y="235" class="svgsm">EMAs can't move within the block → median is dragged by the 5 fresh prices</text>
+</svg>
+<figcaption>UwULend's custom model: sUSDe price = median of 10 values. Dumping USDe into the 5 pools lowers the 5 instantaneous prices; the 5 EMAs are frozen; the median slides down. Borrow cheap, swap back, liquidate — $19M.</figcaption>
+</figure>
+
+<h3>2.4 What a price-manipulation attack is</h3>
+<p>The attacker (usually funded by a <b>flash loan</b> — a huge loan that must be repaid within the same
+transaction, so it needs no collateral) makes a large trade <i>not to trade</i>, but to <b>push a formula's
+output</b>. While the price is distorted they interact with a victim protocol that trusts that formula
+(borrow too much, redeem too much, claim too much), then push the price back and leave with profit.
+All within one transaction, so nobody can react in between.</p>
+
+<h3>2.5 The "exchange-rate" approach used by earlier tools <span class="tag paper">§II-B</span></h3>
+<p>Existing detectors (<b>DeFiRanger</b>, <b>DeFort</b>) define price as an <b>exchange rate</b> between two
+tokens (tokens out ÷ tokens in), track its history, and alarm when it exits a "normal fluctuation range."
+That presumes you <i>can</i> compute the rate and know what "normal" is — true for CPMM-style pools,
+false for custom formulas like a median-of-10.</p>
+
+<h3>2.6 High-level DeFi operations <span class="tag paper">§V-B</span></h3>
+<p>Raw transaction data is just a stream of token transfers. Humans think in verbs. From a study of the top-30
+DeFi apps, the paper defines <b>six operations</b> to recover from raw transfers:</p>
+<div class="tblwrap"><table>
+<tr><th>Operation</th><th>Meaning (plain words)</th><th>Recognizable footprint in transfers</th></tr>
+<tr><td><b>Swap</b></td><td>trade token X for token Y via a pool</td><td>a closed loop: user → pool(s) → user, different token out than in</td></tr>
+<tr><td><b>Deposit</b></td><td>put a token into a protocol, get a receipt token</td><td>user sends X; protocol <i>mints</i> proof-token to user</td></tr>
+<tr><td><b>Withdraw</b></td><td>redeem the receipt token for the assets</td><td>user's proof-token is <i>burned</i>; protocol sends assets back</td></tr>
+<tr><td><b>Borrow</b></td><td>receive tokens against collateral</td><td>user receives X; a debt-token is minted</td></tr>
+<tr><td><b>Stake</b></td><td>lock tokens to earn rewards (no receipt token)</td><td>user sends X; nothing minted back</td></tr>
+<tr><td><b>Claim</b></td><td>collect staked tokens/rewards (nothing burned)</td><td>protocol sends tokens; nothing burned</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="findings">3. The paper's DeFi findings — what they discovered &amp; claim</h2>
+
+<p>Now the paper's own contributions on the DeFi side. Six findings; each later plays a specific role in the system.</p>
+
+<div class="tblwrap"><table>
+<tr><th style="width:9em">Finding</th><th>What they claim</th><th>Evidence</th><th>Role in the system</th></tr>
+<tr><td><b>F1.</b> Custom models are common <span class="tag paper">§I</span></td>
+    <td><b>44.2%</b> of the 95 real price-manipulation attacks (2021–2024, $381M losses) target <b>non-standard</b> price models.</td>
+    <td>Their survey of 95 attacks assembled from DeFort's list (54), DeFiHackLabs (55) and an industry partner (31), deduplicated.</td>
+    <td>Motivation: any detector that only understands CPMM misses almost half the problem.</td></tr>
+<tr><td><b>F2.</b> Exchange-rate detection fails on them <span class="tag paper">§II-B</span></td>
+    <td>Rate + "normal range" methods are blind to subtle custom-model manipulation.</td>
+    <td>UwULend: the manipulated sUSDe price moved only <b>−4.2% / +4.43%</b> — inside DeFort's learned bounds; DeFort misses it.</td>
+    <td>Motivation for a different signal than exchange rates.</td></tr>
+<tr><td><b>F3.</b> Direction suffices, and is derivable <span class="tag paper">§II-B</span></td>
+    <td>You don't need the price's <i>magnitude</i>. The <b>direction</b> (up/down) per token per user invocation, combined with what operation happened, is enough — and direction follows from <i>(price formula, balance changes)</i> alone.</td>
+    <td>The CPMM worked example above generalizes: every price model is a function of balances, so balance deltas determine the direction of its output.</td>
+    <td><b>The core insight.</b> Defines exactly what the LLM must do (and nothing more).</td></tr>
+<tr><td><b>F4.</b> Transfer Graph beats CFT <span class="tag paper">§V-A</span></td>
+    <td>Modeling each user invocation's transfers as a time-indexed directed graph (<b>TG</b>) recovers DeFi operations much better than DeFiRanger's Cash-Flow-Tree.</td>
+    <td>On 1,000 real Ethereum transactions: true-positive rate <b>0.912 vs 0.559</b>, precision 0.984 vs 0.991; +89.3% on complex multi-hop swaps.</td>
+    <td>Supplies reliable "verbs" (Swap/Deposit/…) that the attack patterns are written over.</td></tr>
+<tr><td><b>F5.</b> Attacks follow 8 patterns <span class="tag paper">§VI, Table I</span></td>
+    <td>Across 4 protocol types, price-manipulation attacks reduce to <b>eight 3-step templates</b> (below).</td>
+    <td>In-depth analysis of 4 representative attacks (ElephantMoney, Cream Finance, ATK, Harvest; $163.3M combined), then validated on all 95.</td>
+    <td>The deterministic "judge": match any pattern → verdict True.</td></tr>
+<tr><td><b>F6.</b> LLMs can do F3 — but only when fine-tuned <span class="tag paper">§VII-B</span></td>
+    <td>Off-the-shelf LLMs are mediocre at code→direction reasoning; a small fine-tune fixes it.</td>
+    <td>The ablation: fine-tuning adds +31% detected attacks for GPT-3.5, +19% for GPT-4o (§6 below).</td>
+    <td>Justifies the entire fine-tuning effort — and our Phi-3 baseline.</td></tr>
+</table></div>
+
+<h3>3.1 The eight attack patterns <span class="tag paper">Table I</span></h3>
+<p>Each pattern is an <b>ordered triple</b>: two DeFi operations with a price-change event before, between, or after them.
+"Manipulate" below means "the LLM reported the relevant token's price moved in the profitable direction."
+The patterns group into 4 attack types, 2 patterns each (does the manipulation happen <i>before</i> the money-out step
+or <i>between</i> money-in and money-out):</p>
+
+<div class="tblwrap"><table>
+<tr><th>Type (example victim)</th><th>#</th><th>3-step template (simplified)</th></tr>
+<tr><td rowspan="2"><b>Buy &amp; Sell</b><br>(ElephantMoney)</td>
+    <td>I</td><td>Swap X→Y in pool A → <i>price of Y ↑ (or Z ↓) in pool B</i> → Swap Y→Z in pool B</td></tr>
+<tr><td>II</td><td><i>price moves first</i> → Swap X→Y in pool A → Swap Y→Z in pool B</td></tr>
+<tr><td rowspan="2"><b>Deposit &amp; Borrow</b><br>(Cream Finance)</td>
+    <td>III</td><td>Deposit X (get receipt Y) → <i>price of X ↑ (or Z ↓) at lender</i> → Borrow Z against X</td></tr>
+<tr><td>IV</td><td><i>price moves first</i> → Deposit X → Borrow Z</td></tr>
+<tr><td rowspan="2"><b>Stake &amp; Claim</b><br>(ATK)</td>
+    <td>V</td><td>Stake X → <i>price of Y ↓ at claim contract</i> → Claim Y</td></tr>
+<tr><td>VI</td><td><i>price moves first</i> → Stake X → Claim Y</td></tr>
+<tr><td rowspan="2"><b>Deposit &amp; Withdraw</b><br>(Harvest)</td>
+    <td>VII</td><td>Deposit X (get receipt Y) → <i>price of Y ↑ (or Z ↓) at vault</i> → Withdraw Z by burning Y</td></tr>
+<tr><td>VIII</td><td><i>price moves first</i> → Deposit X → Withdraw Z</td></tr>
+</table></div>
+
+<p class="small">How the 95 real attacks distribute over these patterns <span class="tag paper">Table III</span>:
+I: 49 cases ($55.3M) · II: 20 ($70M) · III: 5 ($141.2M) · IV: 6 ($43M) · V: 1 ($61K) · VI: 2 ($83K) · VII: 11 ($71.4M) · VIII: 1 ($9K).
+Note a structural consequence: every pattern has 3 steps, so a transaction must contain at least
+<b>3 analyzable user invocations</b> — a manipulation squeezed into a single invocation is invisible to this design.</p>
+
+<figure>
+<svg viewBox="0 0 860 170" role="img" aria-label="Old vs new detection idea">
+  <rect x="10" y="26" width="400" height="120" rx="10" fill="var(--bad-bg)" stroke="var(--bad)"/>
+  <text x="210" y="50" text-anchor="middle" class="svgtxt svgb">Old tools (DeFiRanger, DeFort)</text>
+  <text x="210" y="76" text-anchor="middle" class="svgsm">compute exchange rate = out ÷ in</text>
+  <text x="210" y="94" text-anchor="middle" class="svgsm">compare against learned "normal range"</text>
+  <text x="210" y="122" text-anchor="middle" class="svgsm" fill="var(--bad)">✗ undefined / insensitive for custom formulas (F1, F2)</text>
+  <rect x="450" y="26" width="400" height="120" rx="10" fill="var(--ok-bg)" stroke="var(--ok)"/>
+  <text x="650" y="50" text-anchor="middle" class="svgtxt svgb">DeFiScope (F3)</text>
+  <text x="650" y="76" text-anchor="middle" class="svgsm">read the price formula (from code) +</text>
+  <text x="650" y="94" text-anchor="middle" class="svgsm">balance changes → infer DIRECTION only</text>
+  <text x="650" y="122" text-anchor="middle" class="svgsm" fill="var(--ok)">✓ works for any formula — needs reasoning → LLM</text>
+</svg>
+<figcaption>The conceptual pivot. Direction-from-formula needs something that can read arbitrary Solidity and reason — that's why an LLM enters at all.</figcaption>
+</figure>
+
+<!-- ================================================================ -->
+<h2 id="ai">4. AI from zero — the five ideas you need</h2>
+
+<h3>4.1 What an LLM actually is <span class="tag ai">AI</span></h3>
+<p>A large language model is a <b>next-word predictor</b> — autocomplete, scaled up enormously. It is a
+mathematical function with billions of adjustable numbers (<b>parameters</b>, or "weights"). During
+<i>pre-training</i> it read a huge amount of text and its weights were tuned so it predicts the next word well.
+Predicting the next word, repeatedly, is how it "answers": your text (the <b>prompt</b>) goes in; it generates
+a continuation (the <b>response</b>) one token at a time. A side effect of learning to continue text this well is
+real competence at reading code and doing step-by-step reasoning — which is exactly the competence F3 needs.
+<b>Phi-3-medium</b> is such a model, released openly by Microsoft, with <b>14 billion parameters</b>.</p>
+
+<h3>4.2 Why the task is "score 4 statements," not "is this an attack?" <span class="tag paper">§IV-A</span> <span class="tag repo">priceChangeInference.py</span></h3>
+<p>LLMs are unreliable judges of open-ended questions, and their answers are hard to plug into rules. So the
+authors made the LLM's job as narrow and machine-readable as possible. For each user invocation, it must output
+integer scores 1–10 for four fixed statements:</p>
+<pre><code>1) The price of &lt;input token&gt;  ... increases after change   → score?
+2) The price of &lt;input token&gt;  ... decreases after change   → score?
+3) The price of &lt;output token&gt; ... increases after change   → score?
+4) The price of &lt;output token&gt; ... decreases after change   → score?</code></pre>
+<p>Why scores instead of yes/no? <b>Confidence for free.</b> For each token you compare the "increases" score
+against the "decreases" score: higher wins (→ INCREASE or DECREASE); a <b>tie means the model can't tell</b>, and
+the result is discarded as UNCERTAIN rather than guessed. That comparison is 5 lines of Python
+(<code>utils/priceChangeInference.py</code>, <code>generate_finally_prediction</code>) — no threshold to tune.</p>
+
+<h3>4.3 What fine-tuning is <span class="tag ai">AI</span></h3>
+<p><b>Fine-tuning = continuing training on a small, focused set of example (prompt → ideal response) pairs,
+nudging the weights so the model imitates those examples.</b> The base model's general knowledge stays;
+what changes is <i>behavior on your task</i>: format, procedure, domain habits. Analogy: a broadly-educated
+new employee (base model) given a short bootcamp of worked examples (fine-tune) — same brain, new work habits.
+"SFT" (supervised fine-tuning) just means: the examples come with the correct answers written out.</p>
+
+<h3>4.4 What LoRA is — and what r=4, alpha=8, qkv_proj/o_proj mean <span class="tag ai">AI</span> <span class="tag repo">fine-tuning.py</span></h3>
+<p>Fully fine-tuning all 14B weights is expensive and clumsy. <b>LoRA</b> (Low-Rank Adaptation) is the standard
+shortcut: <b>freeze the whole base model</b> and, next to a few chosen weight matrices, add a tiny trainable
+"correction" — two small matrices A and B whose product gets added to the frozen matrix:</p>
+
+<figure>
+<svg viewBox="0 0 860 240" role="img" aria-label="LoRA diagram">
+  <rect x="40" y="40" width="150" height="150" rx="8" fill="var(--defi-bg)" stroke="var(--defi)" stroke-width="2"/>
+  <text x="115" y="108" text-anchor="middle" class="svgtxt svgb">W  (frozen ❄)</text>
+  <text x="115" y="130" text-anchor="middle" class="svgsm">5120 × 5120</text>
+  <text x="115" y="148" text-anchor="middle" class="svgsm">26 million numbers</text>
+  <text x="255" y="120" text-anchor="middle" class="svgtxt svgb" font-size="22">+</text>
+  <rect x="310" y="40" width="26" height="150" rx="4" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text x="323" y="212" text-anchor="middle" class="svgsm" fill="var(--data)">B (5120×4)</text>
+  <text x="365" y="120" text-anchor="middle" class="svgtxt">×</text>
+  <rect x="392" y="102" width="150" height="26" rx="4" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text x="467" y="90" text-anchor="middle" class="svgsm" fill="var(--data)">A (4×5120) — trainable 🔥</text>
+  <text x="580" y="120" text-anchor="middle" class="svgtxt svgb" font-size="22">=</text>
+  <rect x="620" y="40" width="150" height="150" rx="8" fill="var(--ok-bg)" stroke="var(--ok)" stroke-width="2"/>
+  <text x="695" y="105" text-anchor="middle" class="svgtxt svgb">W′ = W + (α/r)·B·A</text>
+  <text x="695" y="128" text-anchor="middle" class="svgsm">the "adapted" weight</text>
+  <text x="695" y="146" text-anchor="middle" class="svgsm">used at inference</text>
+  <text x="430" y="232" text-anchor="middle" class="svgsm">The narrow dimension of A and B is the rank r = 4 — the "width of the correction channel".</text>
+</svg>
+<figcaption>LoRA: don't repaint the wall, put a thin sticker on it. Only the orange parts are trained; the blue 14B stays untouched.</figcaption>
+</figure>
+
+<p>Now decode every LoRA parameter the authors chose (from <code>fine-tuning/fine-tuning.py</code>, confirmed
+byte-identical in the released adapter's <code>adapter_config.json</code> on HuggingFace):</p>
+
+<div class="tblwrap"><table>
+<tr><th>Parameter</th><th>Value</th><th>Plain-English meaning</th><th>Why this value</th></tr>
+<tr><td><code>r</code> (rank)</td><td class="num">4</td>
+    <td>Width of the correction channel; how "expressive" the patch is. Bigger r = more trainable numbers.</td>
+    <td>The task is narrow (a scoring habit + a reasoning procedure), so a very thin patch suffices; small r also resists over-fitting 800 examples.</td></tr>
+<tr><td><code>lora_alpha</code></td><td class="num">8</td>
+    <td>A scaling knob: the patch is multiplied by α/r (here 8/4 = 2) before being added. Controls how loudly the patch speaks over the frozen base.</td>
+    <td>α = 2r is a common convention; a moderate gain.</td></tr>
+<tr><td><code>target_modules</code></td><td><code>qkv_proj, o_proj</code></td>
+    <td>WHICH matrices get a patch. These two are the entry gate and exit gate of every <b>attention</b> block — the machinery a transformer uses to decide which earlier words to look at (see figure below).</td>
+    <td>Patching attention shapes <i>what the model attends to and how it routes reasoning</i> — appropriate for teaching a reading-and-reasoning procedure; it's also the classic minimal LoRA target set.</td></tr>
+<tr><td><code>lora_dropout</code></td><td class="num">0.1</td>
+    <td>During training, randomly silence 10% of the patch's connections each step — a standard trick that prevents memorizing the training set.</td>
+    <td>Common default for small datasets.</td></tr>
+<tr><td><code>task_type</code></td><td><code>CAUSAL_LM</code></td>
+    <td>"Causal language model" = the plain next-token-prediction setup of §4.1.</td>
+    <td>That's what Phi-3 is.</td></tr>
+</table></div>
+
+<figure>
+<svg viewBox="0 0 860 170" role="img" aria-label="Where qkv_proj and o_proj sit">
+  <text x="430" y="18" text-anchor="middle" class="svgtxt svgb">One transformer layer (Phi-3-medium has 40 of these, stacked)</text>
+  <rect x="20"  y="60" width="90" height="50" rx="8" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="65" y="90" text-anchor="middle" class="svgsm">tokens in</text>
+  <rect x="140" y="46" width="120" height="78" rx="8" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text x="200" y="80" text-anchor="middle" class="svgtxt svgb">qkv_proj</text>
+  <text x="200" y="100" text-anchor="middle" class="svgsm">🔥 LoRA patch</text>
+  <rect x="290" y="60" width="130" height="50" rx="8" fill="var(--ai-bg)" stroke="var(--ai)"/>
+  <text x="355" y="90" text-anchor="middle" class="svgsm">attention (look-ups)</text>
+  <rect x="450" y="46" width="110" height="78" rx="8" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text x="505" y="80" text-anchor="middle" class="svgtxt svgb">o_proj</text>
+  <text x="505" y="100" text-anchor="middle" class="svgsm">🔥 LoRA patch</text>
+  <rect x="590" y="60" width="120" height="50" rx="8" fill="var(--defi-bg)" stroke="var(--defi)"/>
+  <text x="650" y="90" text-anchor="middle" class="svgsm">MLP (frozen ❄)</text>
+  <rect x="740" y="60" width="100" height="50" rx="8" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="790" y="90" text-anchor="middle" class="svgsm">tokens out</text>
+  <line x1="110" y1="85" x2="138" y2="85" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="260" y1="85" x2="288" y2="85" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="420" y1="85" x2="448" y2="85" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="560" y1="85" x2="588" y2="85" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="710" y1="85" x2="738" y2="85" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="430" y="152" text-anchor="middle" class="svgsm">Patched: the projection into attention (q,k,v) and the projection out of it (o) — in every one of the 40 layers.</text>
+</svg>
+<figcaption>Where the patches physically sit inside the network.</figcaption>
+</figure>
+
+<div class="box example"><div class="bt">Do the arithmetic — the 7.4&nbsp;MB file IS the fine-tune</div>
+Per layer, the patches contain r×(in+out) numbers: qkv_proj → 4×(5120+7680) = 51,200; o_proj → 4×(5120+5120) = 40,960.
+Times 40 layers → <b>3,686,400 trainable parameters ≈ 0.026%</b> of the 14-billion base. Stored at 2 bytes each
+→ <b>7.37 MB</b> — exactly the size of <code>adapter_model.safetensors</code> in the
+<code>RocketRaccoonnn/…_lora_v2</code> HuggingFace repo. That small file <i>is</i> the entire result of the
+authors' training run; "loading the fine-tuned model" = loading the 28&nbsp;GB base + snapping on this 7.4&nbsp;MB patch.</div>
+
+<h3>4.5 Training vocabulary — the remaining knobs <span class="tag ai">AI</span></h3>
+<div class="tblwrap"><table>
+<tr><th>Term</th><th>Plain-English meaning</th></tr>
+<tr><td><b>loss</b></td><td>A number measuring "how wrong was the model's next-token prediction vs the ideal response." Training = repeatedly nudging weights downhill on this number.</td></tr>
+<tr><td><b>learning rate (lr)</b></td><td>The step size of each nudge. Too big → chaos; too small → glacial. Their 1e-4 is a standard LoRA-sized step.</td></tr>
+<tr><td><b>epoch</b></td><td>One full pass over all training examples. 10 epochs = the model sees each of the 800 examples 10 times.</td></tr>
+<tr><td><b>batch</b></td><td>How many examples are averaged per nudge. They use micro-batches of 2 per GPU, accumulate 4 before stepping, on 4 GPUs → effective batch 32.</td></tr>
+<tr><td><b>fp16</b></td><td>Store numbers in 16-bit floating point (half the memory, ~same quality) during training.</td></tr>
+<tr><td><b>DeepSpeed ZeRO-2</b></td><td>A library that splits the training bookkeeping across the 4 GPUs so a 14B model fits.</td></tr>
+<tr><td><b>train / validation / test split</b></td><td>Learn from <i>train</i>; peek at <i>validation</i> during training to detect over-fitting; grade once at the end on <i>test</i>, which the model has never influenced. Like homework / practice quiz / final exam.</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2 id="bridge">5. The bridge: turning DeFi knowledge into a fine-tune, step by step</h2>
+
+<p>This is the part you asked about most. Seven steps take the findings of §3 into the 7.4&nbsp;MB adapter.
+Watch how each step consumes a specific piece of domain knowledge.</p>
+
+<div class="steps">
+
+<div class="step"><h3>Define the exact question the model must answer <span class="tag paper">§IV-A, Fig. 2</span></h3>
+<p><b>Domain knowledge used: F3</b> (direction suffices). The task is frozen as: <i>given (a) the pricing code
+and (b) a list of balance changes, score the four increase/decrease statements 1–10.</i> Nothing about attacks,
+profits, or verdicts — those never enter the LLM's world. Narrowing the task this hard is what makes a small
+fine-tune feasible at all: the model must learn <b>one skill</b>, not "DeFi security."</p></div>
+
+<div class="step"><h3>Get labeled data for free — the CPMM equation is the answer key <span class="tag paper">§IV-A</span></h3>
+<p><b>Domain knowledge used: the CPMM formula itself (§2.3a).</b> Training needs examples <i>with correct
+answers</i>. Manually labeling thousands of "did the price go up?" cases would be slow and error-prone. The
+authors' cleverest move: for a CPMM pool, the correct direction is <b>computable</b> — P(X)=y/x, so any balance
+change pair mechanically implies the direction. <b>The domain equation becomes the labeling function.</b>
+Zero human labeling for the raw facts; humans only review the <i>wording</i> later (step 5).</p>
+<div class="box insight"><div class="bt">Analogy</div>
+It's a crash-test lab: instead of collecting real accidents (rare, messy, unlabeled), crash cars in a lab where
+physics tells you the exact outcome every time. Physics here = x·y=k.</div></div>
+
+<div class="step"><h3>Manufacture the data — Foundry simulation <span class="tag paper">§IV-A</span></h3>
+<p><b>Domain knowledge used: how real swaps work (§2.2–2.3).</b> They used <b>Foundry</b> (a standard Ethereum
+developer toolkit) to <b>fork</b> the real blockchain at block height <b>17,949,214</b> (August 2023) — a private
+sandbox copy where you can execute anything without spending money — and pointed its <b>fuzzer</b> (an
+automatic random-input generator) at the real <b>Uniswap V2 BTC20/WETH</b> pool:</p>
+<figure>
+<svg viewBox="0 0 860 150" role="img" aria-label="Data factory loop">
+  <rect x="10" y="34" width="150" height="80" rx="10" fill="var(--defi-bg)" stroke="var(--defi)"/>
+  <text x="85" y="66" text-anchor="middle" class="svgsm svgb">fork chain at</text>
+  <text x="85" y="84" text-anchor="middle" class="svgsm">block 17,949,214</text>
+  <rect x="190" y="34" width="160" height="80" rx="10" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="270" y="60" text-anchor="middle" class="svgsm svgb">random amount</text>
+  <text x="270" y="78" text-anchor="middle" class="svgsm">100–1000 ETH</text>
+  <text x="270" y="96" text-anchor="middle" class="svgsm">(fuzzing)</text>
+  <rect x="380" y="34" width="170" height="80" rx="10" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="465" y="60" text-anchor="middle" class="svgsm svgb">execute real swap</text>
+  <text x="465" y="78" text-anchor="middle" class="svgsm">on BTC20/WETH pool</text>
+  <text x="465" y="96" text-anchor="middle" class="svgsm">(both directions)</text>
+  <rect x="580" y="34" width="130" height="80" rx="10" fill="var(--data-bg)" stroke="var(--data)"/>
+  <text x="645" y="60" text-anchor="middle" class="svgsm svgb">record Δbalances</text>
+  <text x="645" y="78" text-anchor="middle" class="svgsm">(ΔWETH, ΔBTC20)</text>
+  <rect x="740" y="34" width="110" height="80" rx="10" fill="var(--ok-bg)" stroke="var(--ok)"/>
+  <text x="795" y="60" text-anchor="middle" class="svgsm svgb">label = free</text>
+  <text x="795" y="78" text-anchor="middle" class="svgsm">from x·y=k</text>
+  <line x1="160" y1="74" x2="188" y2="74" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="350" y1="74" x2="378" y2="74" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="550" y1="74" x2="578" y2="74" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="710" y1="74" x2="738" y2="74" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="430" y="140" text-anchor="middle" class="svgsm">repeat → 500 price-inflating + 500 price-deflating swaps = 1,000 labeled balance-change pairs</text>
+</svg>
+<figcaption>The data factory. Swapping BTC20→WETH and WETH→BTC20 gives both label classes, 500 each.</figcaption>
+</figure>
+<p>Why these choices?</p>
+<ul>
+<li><b>Why BTC20 and a forked simulation?</b> To avoid <b>data leakage</b> — the situation where a model looks
+smart only because it memorized the test material during pre-training. BTC20 was a fresh token, and simulated
+swaps never existed on-chain, so no LLM can have memorized them.</li>
+<li><b>Why 100–1000 ETH per swap?</b> Big enough to move a pool visibly — the size range of real manipulation
+trades, not retail noise.</li>
+<li><b>Why only CPMM data?</b> Only CPMM gives free labels (step 2). Whether skills learned on CPMM transfer to
+custom formulas is exactly what the evaluation must check — it does, surprisingly well (§6.3).</li>
+</ul></div>
+
+<div class="step"><h3>Wrap each pair in a chain-of-thought prompt <span class="tag paper">§IV-A, Fig. 2</span> <span class="tag repo">dataset/training_set.csv</span></h3>
+<p><b>Domain knowledge used: F3's two-stage structure.</b> Each training prompt has two instructions that force a
+<b>procedure</b>, not just an answer — this is "chain-of-thought" (CoT): make the model show its working like a
+math student. The real thing, from row 1 of <code>dataset/training_set.csv</code> (the actual file in this repo, 800 rows):</p>
+<pre><code>Instruction 1:
+The following is related price calculation functions. You are required
+to extract the price calculation model.
+
+   function swapExactTokensForTokens(...) { ... }        ← real Uniswap
+   function getAmountsOut(...) { ... }                     router code
+   function getAmountOut(uint amountIn, uint reserveIn,
+                         uint reserveOut) ... { ... }
+
+Instruction 2: ... evaluate the degree of credibility of following
+statements and give me evaluation scores from 1 to 10:
+ 1) The price of input token relative to output token increases after change
+ 2) The price of input token relative to output token decreases after change
+ 3) The price of output token relative to input token increases after change
+ 4) The price of output token relative to input token decreases after change
+There is no need for quantitative calculation. ...
+
+&lt;change&gt;
+the balance of input token in the contract increases by 84650694727425975463,
+the balance of output token in the contract decreases by 48577257431249161150267, ...
+&lt;/change&gt;
+
+You MUST answer in the following format ... &lt;answer&gt; ... &lt;/answer&gt;</code></pre>
+<p>Note where the pieces of the puzzle went: the <b>pricing code</b> feeds Instruction 1; the Foundry
+<b>balance deltas</b> fill the <code>&lt;change&gt;</code> block; F3's four-direction question becomes the four
+statements; and the rigid <code>&lt;answer&gt;</code> format exists so five lines of Python can parse the reply.</p></div>
+
+<div class="step"><h3>Write the ideal responses — model drafts, humans correct <span class="tag paper">§IV-A</span></h3>
+<p>Fine-tuning needs the <i>target response text</i>, not just the right label. Writing 1,000 step-by-step
+explanations by hand is expensive, so: <b>(1)</b> ask an LLM to draft a full response for each prompt (analysis of
+the code, then the four scores); <b>(2)</b> a human checks each draft against the free CPMM label; <b>(3)</b> if the
+direction is wrong, fix it — mechanically, by swapping the scores of the opposite statements. The result (again
+real, from row 1 of the shipped CSV): reasoning first, then</p>
+<pre><code>&lt;answer&gt;
+1) ... increases after change": 2
+2) ... decreases after change": 8      ← input token: DOWN (confident)
+3) ... increases after change": 8      ← output token: UP (confident)
+4) ... decreases after change": 2
+&lt;/answer&gt;</code></pre>
+<p>So each training example teaches simultaneously: the <b>procedure</b> (extract formula → reason over deltas),
+the <b>direction mapping</b> (reserve up ⇒ that token's price down), and the <b>output format</b>.</p></div>
+
+<div class="step"><h3>Set the training run — every number decoded <span class="tag paper">§VIII</span> <span class="tag repo">model_comparison_result.md, fine-tuning.py</span></h3>
+<div class="tblwrap"><table>
+<tr><th>Setting</th><th>Value</th><th>What it means / why</th></tr>
+<tr><td>Data split</td><td class="num">800 / 100 / 100</td><td>The 1,000 samples split 8:1:1 into train/validation/test — shipped in this repo as <code>dataset/training_set.csv</code>, <code>eval_set.csv</code>, <code>test_set.csv</code>.</td></tr>
+<tr><td>LoRA</td><td class="num">r=4, α=8, qkv_proj+o_proj, dropout 0.1</td><td>§4.4 — a 3.7M-parameter patch on attention, 0.026% of the model.</td></tr>
+<tr><td>Learning rate</td><td class="num">1e-4</td><td>Standard LoRA step size (AdamW optimizer, linear decay).</td></tr>
+<tr><td>Epochs</td><td class="num">10</td><td>Each example seen 10 times — enough to instill the habit without memorizing.</td></tr>
+<tr><td>Batch</td><td class="num">2 × 4 × 4 = 32</td><td>micro-batch 2 per GPU × gradient-accumulation 4 × 4 GPUs = effective 32 examples per weight update.</td></tr>
+<tr><td>Max length</td><td class="num">2,000 tokens</td><td>Prompt+response budget per example (the code samples above fit comfortably).</td></tr>
+<tr><td>Precision / infra</td><td>fp16, DeepSpeed ZeRO-2</td><td>Memory tricks so 14B fits across <b>4× NVIDIA H800</b> GPUs.</td></tr>
+</table></div>
+<p class="small">Contrast — the paper's <i>default</i> GPT path used OpenAI's hosted fine-tuning instead: only 96
+samples (OpenAI recommends 50–100), 83%/17% train/validation, stop when validation hits 100%, ≈1M training
+tokens, $8 (GPT-3.5) / $25 (GPT-4o). Same data recipe, different training service. Our baseline is the
+<b>Phi-3/LoRA path</b>, which is fully self-hosted and reproducible.</p></div>
+
+<div class="step"><h3>Run it — what "training" mechanically does <span class="tag repo">fine-tuning.py</span></h3>
+<p>For each batch: feed <i>prompt + ideal response</i> through the model; at every token position the model
+predicts the next token; compute the loss <b>only over the response tokens</b> (the prompt positions are masked
+out with the label <code>-100</code>, the "don't grade this part" marker — you can see it in
+<code>fine-tuning.py</code>'s <code>preprocess_function</code>); nudge <b>only the LoRA patches</b> downhill; repeat for 10 epochs.</p>
+<figure>
+<svg viewBox="0 0 860 120" role="img" aria-label="Loss masking">
+  <rect x="20"  y="30" width="430" height="44" rx="8" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="235" y="57" text-anchor="middle" class="svgsm">prompt tokens (code + changes + statements) — label −100, no loss</text>
+  <rect x="450" y="30" width="390" height="44" rx="8" fill="var(--ok-bg)" stroke="var(--ok)" stroke-width="2"/>
+  <text x="645" y="57" text-anchor="middle" class="svgsm svgb">response tokens (reasoning + scores) — loss computed here</text>
+  <text x="430" y="104" text-anchor="middle" class="svgsm">Only the response teaches the model: it learns to PRODUCE the reasoning and scores, given any such prompt.</text>
+</svg>
+<figcaption>Label masking: grade only the part the model must learn to produce.</figcaption>
+</figure>
+<p>The output of the run = the trained A/B patches = <code>adapter_model.safetensors</code> (7.4&nbsp;MB) +
+<code>adapter_config.json</code>. The authors uploaded exactly these two files to HuggingFace as
+<b><code>RocketRaccoonnn/Phi-3-medium-128k-instruct_LoRA_CASUAL_LM_lora_v2</code></b> — the artifact this repo
+downloads and runs. (Paper reference [70] points to this exact URL.)</p>
+<p class="small">Honest footnote for re-runners: the shipped script formats training text as
+<code>"Task: {input}\nResponse:\n{response}"</code>, and its DeepSpeed config file
+(<code>lora_ds_config.json</code>) is missing from the repo — its contents are recoverable from
+<code>model_comparison_result.md</code>. Neither matters for <i>using</i> the released adapter.</p></div>
+
+</div><!-- /steps -->
+
+<!-- ================================================================ -->
+<h2 id="proof">6. How they proved the fine-tuning works — the evidence ladder</h2>
+
+<p>"It seems better" is not proof. The paper climbs five rungs, each answering a different skeptical question.</p>
+
+<h3>6.1 Rung 1 — Does the sensor itself get the direction right? <span class="tag paper">§IV-B</span></h3>
+<p>On the <b>held-out test set</b> (100 price-change cases the model never trained on): <b>Type-I prompts:
+99% correct direction. Type-II prompts: 97%.</b> (Type-II is the fallback when a pool's source code isn't
+published: the prompt simply asserts "this pool follows CPMM" instead of pasting code — valid because
+two-token pools overwhelmingly are CPMMs.) So the sensor is accurate <i>in isolation</i> before it's ever
+plugged into the detector.</p>
+
+<h3>6.2 Rung 2 — Does fine-tuning improve the whole detector? (ablation) <span class="tag paper">§VII-B, Fig. 6</span></h3>
+<p>An <b>ablation</b> = remove one component, measure the drop. Here: run the identical pipeline with the
+base model vs the fine-tuned one. First, a structural fact: of the 95 attacks, only <b>78 ever reach the LLM</b>
+(8 lack verified source / fail compilation; 9 are cross-transaction or non-standard-token cases). Results over
+those 78 (GPT models; the paper gives no per-category split for Phi-3):</p>
+
+<figure>
+<svg viewBox="0 0 860 260" role="img" aria-label="Ablation results">
+  <text x="20" y="24" class="svgsm"><tspan fill="var(--defi)">■</tspan> CPMM detected  <tspan fill="var(--ai)">■</tspan> Custom detected  <tspan fill="var(--ok)">■</tspan> Stableswap detected  <tspan fill="var(--muted)">■</tspan> missed</text>
+  <!-- rows: y=44,94,144,194 ; scale 5.2 px/case; x0=180 -->
+  <text x="170" y="66" text-anchor="end" class="svgsm">GPT-3.5 base</text>
+  <rect x="180" y="48" width="192" height="26" fill="var(--defi)"/>
+  <rect x="372" y="48" width="94"  height="26" fill="var(--ai)"/>
+  <rect x="466" y="48" width="16"  height="26" fill="var(--ok)"/>
+  <rect x="482" y="48" width="104" height="26" fill="var(--muted)" opacity=".45"/>
+  <text x="592" y="66" class="svgsm">58 / 78 detected</text>
+
+  <text x="170" y="116" text-anchor="end" class="svgsm svgb">GPT-3.5 fine-tuned</text>
+  <rect x="180" y="98" width="234" height="26" fill="var(--defi)"/>
+  <rect x="414" y="98" width="146" height="26" fill="var(--ai)"/>
+  <rect x="560" y="98" width="16"  height="26" fill="var(--ok)"/>
+  <rect x="576" y="98" width="10"  height="26" fill="var(--muted)" opacity=".45"/>
+  <text x="592" y="116" class="svgsm svgb">76 / 78  (+18 = +31%)</text>
+
+  <text x="170" y="166" text-anchor="end" class="svgsm">GPT-4o base</text>
+  <rect x="180" y="148" width="182" height="26" fill="var(--defi)"/>
+  <rect x="362" y="148" width="135" height="26" fill="var(--ai)"/>
+  <rect x="497" y="148" width="11"  height="26" fill="var(--ok)"/>
+  <rect x="508" y="148" width="78"  height="26" fill="var(--muted)" opacity=".45"/>
+  <text x="592" y="166" class="svgsm">63 / 78</text>
+
+  <text x="170" y="216" text-anchor="end" class="svgsm svgb">GPT-4o fine-tuned</text>
+  <rect x="180" y="198" width="224" height="26" fill="var(--defi)"/>
+  <rect x="404" y="198" width="151" height="26" fill="var(--ai)"/>
+  <rect x="555" y="198" width="16"  height="26" fill="var(--ok)"/>
+  <rect x="571" y="198" width="15"  height="26" fill="var(--muted)" opacity=".45"/>
+  <text x="592" y="216" class="svgsm svgb">75 / 78  (+12 = +19%)</text>
+  <text x="430" y="250" text-anchor="middle" class="svgsm">Reachable set = 45 CPMM + 30 custom + 3 Stableswap attacks. Same pipeline, same prompts — only the model differs.</text>
+</svg>
+<figcaption>Paper Fig. 6 redrawn. Fine-tuning is worth +31% / +19% whole-system detections; with GPT-3.5-FT the CPMM category hits 45/45 = 100%.</figcaption>
+</figure>
+
+<h3>6.3 Rung 3 — The transfer surprise: trained on CPMM only, wins on custom models</h3>
+<p>The training data was <b>100% CPMM</b> (step 3's simulator). If fine-tuning had merely memorized CPMM facts,
+custom-model attacks would not improve. They improved dramatically: custom-model detection went
+<b>60% → 93.3%</b> (GPT-3.5) and 86.7% → 96.7% (GPT-4o). The authors' explanation, from reading the models'
+responses: the biggest change is that the fine-tuned model <b>strictly follows the two-step procedure</b> —
+extract the price formula first, then reason from it plus the deltas — whereas the base model jumps to scores
+without doing the analysis. In other words, <b>the fine-tune taught a reasoning ritual, not a formula</b> — and
+rituals transfer to formulas never seen in training. This is the paper's deepest empirical claim.</p>
+
+<h3>6.4 Rung 4 — Does the method survive changing the model? Phi-3 — our baseline <span class="tag paper">§VIII, Table VI</span></h3>
+<p>To show the recipe isn't an artifact of OpenAI's fine-tuning service, they re-applied it (as plain LoRA SFT,
+steps 5–7 above) to the open <b>Phi-3-medium</b> — 4× H800 GPUs, all 1,000 samples:</p>
+
+<figure>
+<svg viewBox="0 0 860 240" role="img" aria-label="Table VI recall comparison">
+  <!-- baseline grid: recall 0..1 → width 0..560; x0=200; bar h=22 -->
+  <line x1="200" y1="20" x2="200" y2="200" stroke="var(--line)"/>
+  <line x1="648" y1="20" x2="648" y2="200" stroke="var(--line)" stroke-dasharray="4 4"/>
+  <text x="648" y="214" text-anchor="middle" class="svgsm">0.80</text>
+  <text x="170" y="46" text-anchor="end" class="svgsm">GPT-3.5</text>
+  <rect x="200" y="30" width="342" height="16" fill="var(--muted)" opacity=".5"/><text x="548" y="43" class="svgsm">0.61 base</text>
+  <rect x="200" y="50" width="448" height="16" fill="var(--defi)"/><text x="654" y="63" class="svgsm svgb">0.80 fine-tuned (private!)</text>
+  <text x="170" y="106" text-anchor="end" class="svgsm">GPT-4o</text>
+  <rect x="200" y="90" width="370" height="16" fill="var(--muted)" opacity=".5"/><text x="576" y="103" class="svgsm">0.66 base</text>
+  <rect x="200" y="110" width="442" height="16" fill="var(--defi)"/><text x="648" y="123" class="svgsm">0.79 fine-tuned (private)</text>
+  <text x="170" y="166" text-anchor="end" class="svgsm svgb">Phi-3</text>
+  <rect x="200" y="150" width="291" height="16" fill="var(--muted)" opacity=".5"/><text x="497" y="163" class="svgsm">0.52 base</text>
+  <rect x="200" y="170" width="370" height="16" fill="var(--data)"/><text x="576" y="183" class="svgsm svgb">0.66 fine-tuned — RELEASED = what we run</text>
+  <text x="430" y="232" text-anchor="middle" class="svgsm">Recall on all 95 D1 attacks (Table VI). Fine-tuned Phi-3 ties base GPT-4o — a 14B open model matching a frontier model's baseline.</text>
+</svg>
+<figcaption>Paper Table VI redrawn. The orange bar is the RocketRaccoonnn adapter — the only released, reproducible instance.</figcaption>
+</figure>
+
+<h3>6.5 Rung 5 — Does the whole system beat the state of the art? <span class="tag paper">§VII-A/C</span></h3>
+<p>With the (private) GPT-3.5 fine-tune installed: recall <b>80%</b> on D1 vs DeFort 52.6%, DeFiRanger 51.6%,
+DeFiTainter 35.8%. On 968 real suspicious transactions (D2): 153 flagged, 147 manually confirmed →
+<b>precision 96%</b>, including <b>81 previously undocumented attacks</b>. On 96,800 benign transactions (D3):
+<b>zero false alarms</b>, ~2.5 s/transaction. These headline numbers establish the <i>method</i>; they are
+<b>not reproducible</b> by us (private model, unreleased D2/D3 labels) — which is precisely why the released
+Phi-3 with its honest 0.66 is the baseline.</p>
+
+<div class="box warn"><div class="bt">Read the ladder as a whole</div>
+Rung 1 isolates the sensor; rung 2 shows the sensor's quality is what moves the whole detector; rung 3 shows the
+learning is procedural (so it generalizes); rung 4 shows it's model-agnostic (and gives us a public artifact);
+rung 5 shows the assembled system beats prior tools. Each rung would be unconvincing alone; together they are
+the paper's argument that <i>the fine-tuning — not luck, leakage, or the rules — is what works</i>.</div>
+
+<!-- ================================================================ -->
+<h2 id="inference">7. How the fine-tuned Phi-3 produces 0.66 in this repo</h2>
+
+<h3>7.1 The pipeline the sensor sits in <span class="tag paper">Fig. 1</span> <span class="tag repo">main.py</span></h3>
+<figure>
+<svg viewBox="0 0 860 300" role="img" aria-label="Ten step pipeline">
+  <rect x="10"  y="20" width="160" height="60" rx="9" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="90" y="45" text-anchor="middle" class="svgsm svgb">① fetch &amp; decode tx</text>
+  <text x="90" y="63" text-anchor="middle" class="svgsm">slice into user invocations</text>
+  <rect x="200" y="20" width="150" height="60" rx="9" fill="var(--defi-bg)" stroke="var(--defi)"/>
+  <text x="275" y="45" text-anchor="middle" class="svgsm svgb">③ transfer graph</text>
+  <text x="275" y="63" text-anchor="middle" class="svgsm">④ recover DeFi ops</text>
+  <rect x="380" y="20" width="150" height="60" rx="9" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="455" y="45" text-anchor="middle" class="svgsm svgb">②⑤ extract pricing code</text>
+  <text x="455" y="63" text-anchor="middle" class="svgsm">+ balance changes</text>
+  <rect x="560" y="20" width="130" height="60" rx="9" fill="var(--th-bg)" stroke="var(--line)"/>
+  <text x="625" y="45" text-anchor="middle" class="svgsm svgb">⑥ build prompt</text>
+  <text x="625" y="63" text-anchor="middle" class="svgsm">Type-I or Type-II</text>
+  <rect x="720" y="20" width="130" height="60" rx="9" fill="var(--ai-bg)" stroke="var(--ai)" stroke-width="2"/>
+  <text x="785" y="45" text-anchor="middle" class="svgsm svgb">⑦⑧ Phi-3 + LoRA</text>
+  <text x="785" y="63" text-anchor="middle" class="svgsm">scores → direction</text>
+  <line x1="170" y1="50" x2="198" y2="50" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="350" y1="50" x2="378" y2="50" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="530" y1="50" x2="558" y2="50" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="690" y1="50" x2="718" y2="50" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <path d="M 785,80 L 785,150 L 480,150" fill="none" stroke="var(--muted)" stroke-width="2"/>
+  <path d="M 275,80 L 275,150 L 440,150" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="300" y="120" width="300 " height="60" rx="9" fill="var(--data-bg)" stroke="var(--data)" stroke-width="2"/>
+  <text x="450" y="145" text-anchor="middle" class="svgsm svgb">⑨ pattern matcher (plain Python)</text>
+  <text x="450" y="163" text-anchor="middle" class="svgsm">(operation, direction) sequence vs 8 patterns</text>
+  <path d="M 450,180 L 450,215" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="355" y="220" width="190" height="46" rx="9" fill="var(--ok-bg)" stroke="var(--ok)"/>
+  <text x="450" y="248" text-anchor="middle" class="svgtxt svgb">verdict: True / False</text>
+  <text x="115" y="245" class="svgsm">⓪ (offline, done once by the authors:</text>
+  <text x="115" y="263" class="svgsm">the fine-tuning of §5 → the adapter)</text>
+</svg>
+<figcaption>Purple = the only learned component. Everything else is deterministic and identical no matter which LLM is plugged in.</figcaption>
+</figure>
+
+<h3>7.2 What Phi-3 sees and answers <span class="tag repo">priceChangeInference.py</span></h3>
+<p>Per user invocation the repo generates exactly the prompt style of §5 step 4 — Type-I when the contract's
+verified source was fetched (via Etherscan), else Type-II ("<code>0x… is the address of a liquidity pool. The
+price model of the pool aligns with the Constant Product Market Maker (CPMM)…</code>"). The reply's four scores
+are parsed by regex, then reduced pairwise:</p>
+<pre><code># utils/priceChangeInference.py — the entire "judgment" on the model's output
+if   increase_score &gt; decrease_score:  tendency = INCREASE
+elif increase_score &lt; decrease_score:  tendency = DECREASE
+else:                                  tendency = UNCERTAIN   # tie → discard</code></pre>
+<div class="box warn"><div class="bt">The silent-benign trap (worth knowing before trusting any batch run)</div>
+If the model call fails (bad key, OOM, network), the code catches the error and sets <b>all scores to 0</b> —
+a tie — so every direction becomes UNCERTAIN, no pattern can fire, and the verdict is a quiet "False."
+A totally broken setup thus looks like "no attacks found." Always confirm the model is genuinely answering
+(e.g. run the known-attack AES transaction first) before believing recall numbers.</div>
+
+<h3>7.3 The arithmetic of 0.66</h3>
+<figure>
+<svg viewBox="0 0 860 210" role="img" aria-label="Recall funnel">
+  <rect x="30"  y="30" width="475" height="52" rx="9" fill="var(--defi-bg)" stroke="var(--defi)"/>
+  <text x="267" y="62" text-anchor="middle" class="svgtxt svgb">95 attacks in D1 (recall denominator)</text>
+  <rect x="30"  y="100" width="390" height="52" rx="9" fill="var(--data-bg)" stroke="var(--data)"/>
+  <text x="225" y="126" text-anchor="middle" class="svgtxt svgb">78 reach the LLM at all</text>
+  <text x="225" y="144" text-anchor="middle" class="svgsm">−8 no source / compile fail, −9 cross-tx / non-ERC20</text>
+  <rect x="30"  y="170" width="315" height="34" rx="9" fill="var(--ok-bg)" stroke="var(--ok)"/>
+  <text x="187" y="192" text-anchor="middle" class="svgtxt svgb">≈63 detected by Phi-3-FT → 63/95 = 0.66</text>
+  <text x="540" y="120" class="svgsm">⇒ ceiling for ANY model in this harness:</text>
+  <text x="540" y="138" class="svgsm svgb">78/95 ≈ 0.82</text>
+  <text x="540" y="176" class="svgsm">Phi-3 converts ~63 of 78 reachable ≈ 81%;</text>
+  <text x="540" y="194" class="svgsm">private GPT-3.5-FT: 76/95 = 0.80, near-ceiling</text>
+</svg>
+<figcaption>0.66 is measured against all 95, including 17 the LLM never even sees — the harness, not the model, caps the score at 0.82.</figcaption>
+</figure>
+
+<h3>7.4 What we actually run, and what to expect</h3>
+<div class="kv">
+<b>Command</b><span><code>python main.py --use_local_model --model_path RocketRaccoonnn/Phi-3-medium-128k-instruct_LoRA_CASUAL_LM_lora_v2 -tx &lt;hash&gt; -bp &lt;chain&gt;</code></span>
+<b>Hardware</b><span>EC2 NVIDIA L4 24 GB, model loaded 8-bit (<code>DEFISCOPE_LOAD_8BIT=1</code>)</span>
+<b>Verified</b><span>AES attack (BSC, <code>0xca4d…ae19</code>) → <b>True</b> in 391 s; Phi-3 scored AES = Decrease, USDT = Increase; patterns "Manipulate→Deposit→Withdraw" and "Deposit→Manipulate→Withdraw/Get reward" fired.</span>
+<b>Deviations vs paper</b><span>8-bit quantization (they used fp16), capped generation length, 2026-patched pipeline, live Etherscan/RPC state.</span>
+<b>Expectation</b><span>full-D1 recall in the <b>0.60–0.70</b> band ⇒ the 0.66 claim reproduced; a few individual verdict flips are normal.</span>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="faq">8. Common confusions, answered</h2>
+
+<div class="box confusion"><div class="bt">"Is the RocketRaccoonnn model the 0.52 one, which becomes 0.66 after we fine-tune it with the repo's script?"</div>
+No — <b>the RocketRaccoonnn adapter IS the finished fine-tune = the 0.66 row.</b> 0.52 is plain Phi-3 with no
+adapter. A LoRA adapter is the <i>output</i> of training, not an input to it; downloading it means the training
+is already done. You never run <code>fine-tuning.py</code> to reach 0.66 — you'd only run it to train a <i>new</i>
+adapter of your own.</div>
+
+<div class="box confusion"><div class="bt">"What does the [70] in 'Phi-3 w/ fine-tuning [70]' mean?"</div>
+It's a bibliography citation, not a version number. Reference [70] in the paper is literally the HuggingFace URL
+of the RocketRaccoonnn adapter — the paper citing its own released artifact.</div>
+
+<div class="box confusion"><div class="bt">"Then what is fine-tuning/fine-tuning.py for?"</div>
+It's the <b>recipe</b> that produced the adapter (and the proof of how it was made — its LoRA numbers match the
+released adapter exactly). Useful if you want to re-train with different data/params to try to beat 0.66;
+irrelevant for reproducing 0.66.</div>
+
+<div class="box confusion"><div class="bt">"Why can't we get the paper's 0.80 / 96% / zero-false-alarm numbers?"</div>
+0.80 needs the authors' fine-tuned GPT-3.5, which lives only inside their OpenAI account. 96% and zero-FP need
+the D2/D3 ground-truth labels, which were never released. The public, reproducible claim is exactly one number:
+<b>Phi-3-FT recall ≈ 0.66 on D1</b>.</div>
+
+<div class="box confusion"><div class="bt">"Is 0.66 the model's accuracy?"</div>
+No — it's the <b>whole system's recall</b> with Phi-3 as the sensor. The model's own measured skill is the
+99%/97% direction accuracy (rung 1). 0.66 mixes model quality with harness limits (the 0.82 ceiling) and the
+rules' coverage. Keep the two numbers separate when writing about the baseline.</div>
+
+<!-- ================================================================ -->
+<h2 id="glossary">9. Glossary &amp; where everything lives</h2>
+
+<div class="tblwrap"><table>
+<tr><th>Term</th><th>One-line meaning</th></tr>
+<tr><td>EOA / CA</td><td>human-keyed account / smart-contract account</td></tr>
+<tr><td>user invocation</td><td>one internal call from attacker-controlled code into other contracts; the unit of analysis</td></tr>
+<tr><td>liquidity pool / AMM</td><td>contract holding two token reserves that prices trades by formula</td></tr>
+<tr><td>price model</td><td>the formula mapping balances → price (CPMM, Stableswap, or custom)</td></tr>
+<tr><td>CPMM</td><td>x·y=k; price = ratio of reserves</td></tr>
+<tr><td>flash loan</td><td>uncollateralized loan repaid within the same transaction</td></tr>
+<tr><td>Transfer Graph (TG)</td><td>time-indexed directed graph of transfers in one user invocation</td></tr>
+<tr><td>LLM / parameters</td><td>next-token predictor / its billions of adjustable numbers</td></tr>
+<tr><td>fine-tuning / SFT</td><td>extra training on (prompt → ideal response) examples</td></tr>
+<tr><td>LoRA / adapter / r / alpha</td><td>tiny trainable patch on chosen matrices / its saved file / patch width / patch gain</td></tr>
+<tr><td>CoT</td><td>chain-of-thought: force the model to show its working before answering</td></tr>
+<tr><td>held-out set</td><td>examples reserved for grading, never trained on</td></tr>
+<tr><td>ablation</td><td>remove/replace one component to measure its contribution</td></tr>
+<tr><td>recall / precision</td><td>share of real attacks caught / share of alarms that are real</td></tr>
+<tr><td>Type-I / Type-II prompt</td><td>prompt with real pricing code / prompt asserting CPMM for closed-source pools</td></tr>
+<tr><td>data leakage</td><td>model looks good only because it saw the test material in pre-training</td></tr>
+</table></div>
+
+<div class="tblwrap"><table>
+<tr><th>Artifact</th><th>Where</th></tr>
+<tr><td>The paper</td><td><code>defiscope.pdf</code> — §II background, §IV fine-tuning, §V–VI operations &amp; patterns, §VII evaluation, §VIII Phi-3 (Table VI)</td></tr>
+<tr><td>Training recipe &amp; hyperparameters</td><td><code>fine-tuning/fine-tuning.py</code>, <code>model_comparison_result.md</code> (= paper ref [69])</td></tr>
+<tr><td>The 1,000 samples</td><td><code>dataset/training_set.csv</code> (800) / <code>eval_set.csv</code> (100) / <code>test_set.csv</code> (100)</td></tr>
+<tr><td>The released fine-tune (what we run)</td><td>HF <code>RocketRaccoonnn/Phi-3-medium-128k-instruct_LoRA_CASUAL_LM_lora_v2</code> (= paper ref [70]; release stated in <code>supplementary_material.md</code> §J)</td></tr>
+<tr><td>Sensor code / judge code</td><td><code>utils/priceChangeInference.py</code> / <code>utils/detector.py</code> (8 patterns)</td></tr>
+<tr><td>The 95-attack benchmark</td><td><code>dataset/D1.csv</code> (hash + chain per row; every row is a real attack)</td></tr>
+<tr><td>Run manuals</td><td><code>how_to_use.md</code> (local), <code>RUN_ON_EC2.md</code> (GPU box), <code>REPRODUCTION.md</code> (all fixes #1–18)</td></tr>
+<tr><td>Research framing</td><td><code>RQ3_BASELINE_NOTES.md</code> (the plan this document expands on)</td></tr>
+</table></div>
+
+<hr>
+<p class="sub small center">Prepared for the RQ3 benchmark study of DeFiScope (Zhong et al., ASE 2025).
+All numbers trace to the paper, the authors' repo files, or this repository's verified runs. 2026-07-09.</p>
+
+</main>
+</body>
+</html>

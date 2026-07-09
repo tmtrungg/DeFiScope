@@ -124,6 +124,7 @@ Full setup, keys, modes, and troubleshooting: **`how_to_use.md`**.
 ## Docs in this repo
 
 - `RQ3_BASELINE_NOTES.md` — the research plan + the paper's domain-knowledge → fine-tuning → 0.66 chain (read before experiments)
+- `PHI3_FINETUNE_EXPLAINED.html` — from-zero visual deep-dive (little-DeFi/no-AI reader) into that same chain: findings, LoRA params decoded, evidence ladder, 0.66 arithmetic (open in a browser)
 - `how_to_use.md` — setup + run manual (start here to run it)
 - `REPRODUCTION.md` — every blocker, every fix, + a recipe to re-fine-tune your own model
 - `TEACHING_GUIDE.html` — from-zero explainer of the paper and LLM concepts (open in a browser)
