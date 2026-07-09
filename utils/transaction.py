@@ -34,7 +34,7 @@ import json
 import sys
 import os
 
-from utils.config import SUPPORTED_NETWORK
+from utils.config import SUPPORTED_NETWORK, explorer_get
 
 TOKEN_NAME: Dict[str, str] = dict() # {token_address: token_name}
 
@@ -64,12 +64,12 @@ class Transaction:
         raw_transaction = raw_transaction["result"]
         if not raw_transaction:
             print("[!]Error in downloading transaction")
-            sys.exit(0)
+            raise RuntimeError("Empty trace result for {tx}".format(tx=self.txhash))
         return raw_transaction, url, explorer_api_key
 
     def setPlatform(self) -> Tuple[str, str]:
         if self.platform == "ethereum":
-            url = SUPPORTED_NETWORK["ethereum"]["quick_node"] #https://methodical-orbital-grass.quiknode.pro/fe07745a7483ec72082179b92c20cd104938bc8b/
+            url = SUPPORTED_NETWORK["ethereum"]["quick_node"]  # set via DEFISCOPE_ETH_RPC env var (needs debug_traceTransaction)
             explorer_api_key = SUPPORTED_NETWORK["ethereum"]["api_key"]
             return url, explorer_api_key
         elif self.platform == "bsc":
@@ -78,20 +78,35 @@ class Transaction:
             return url, explorer_api_key
         else:
             print("[!]Unsupported blockchain platform: {}".format(self.platform))
-            sys.exit(0)
+            raise ValueError("Unsupported blockchain platform: {}".format(self.platform))
 
     def download_raw_transaction(self, url: str) -> None:
         path = "Data/{}_raw_transaction.json".format(self.txhash)
+        # Reuse a cached trace only if it is a valid, non-empty result. Older
+        # versions cached error/rate-limit responses too, which then poisoned
+        # every subsequent run of that tx until the file was deleted by hand.
         if os.path.exists(path):
-            return
-        else:
-            client = HTTPProvider(url)
-            params = [self.txhash,{ "tracer": "callTracer", "tracerConfig": {"withLog" : True}}]
-            raw_transaction = client.make_request('debug_traceTransaction', params)
-            if not os.path.exists("Data"):
-                os.mkdir("Data")
-            with open(path, 'w') as f:
-                json.dump(raw_transaction, f)
+            try:
+                with open(path, 'r') as f:
+                    cached = json.load(f)
+                if cached.get("result"):
+                    return
+            except (json.JSONDecodeError, OSError):
+                pass
+            os.remove(path)  # drop the poisoned cache and re-download
+        client = HTTPProvider(url)
+        params = [self.txhash,{ "tracer": "callTracer", "tracerConfig": {"withLog" : True}}]
+        raw_transaction = client.make_request('debug_traceTransaction', params)
+        if not raw_transaction.get("result"):
+            # Don't cache failures; surface a clear error instead.
+            raise RuntimeError(
+                "debug_traceTransaction returned no result for {tx} (RPC error: {err}). "
+                "Check your DEFISCOPE_{chain}_RPC endpoint supports tracing.".format(
+                    tx=self.txhash, err=raw_transaction.get("error"), chain=self.platform.upper()))
+        if not os.path.exists("Data"):
+            os.mkdir("Data")
+        with open(path, 'w') as f:
+            json.dump(raw_transaction, f)
     
     def decode_raw_transaction(self, raw_transaction: Dict) -> Dict:
         decode_flag = False
@@ -331,16 +346,8 @@ class Transaction:
         return processed_log
 
     def get_abi(self, address: str) -> Dict:
-        if self.platform == "bsc":
-            abi_endpoint = \
-                f"https://api.bscscan.com/api?module=contract&action=getabi&address={address}&apikey={self.explorer_api_key}"
-        elif self.platform == "ethereum":
-            abi_endpoint = \
-                f"https://api.etherscan.io/api?module=contract&action=getabi&address={address}&apikey={self.explorer_api_key}"
-        elif self.platform == "fantom":
-            abi_endpoint = \
-                f"https://api.ftmscan.com/api?module=contract&action=getabi&address={address}&apikey={self.explorer_api_key}"
-        abi = json.loads(requests.get(abi_endpoint).text)
+        # Etherscan V2 multichain endpoint (V1 was retired in 2025). See utils/config.py.
+        abi = explorer_get(self.platform, "getabi", address=address)
         return abi
 
     def decode_log_data(self, abi_codec, event_abi:dict, log:dict, errors = WARN) -> Dict:

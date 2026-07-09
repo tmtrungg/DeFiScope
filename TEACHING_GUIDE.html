@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeFiScope, Annotated — LLMs for DeFi Price Manipulation</title>
+<style>
+  :root {
+    --bg: #eaedf2;
+    --surface: #ffffff;
+    --surface-2: #f3f5f8;
+    --ink: #161a22;
+    --muted: #58616f;
+    --faint: #828b98;
+    --line: #dce1e9;
+    --line-strong: #c3cad5;
+    --accent: #2f3aa3;      /* indigo — blockchain / trust / links */
+    --accent-soft: #e7e9f6;
+    --det: #0e7c66;         /* teal — DETERMINISTIC code */
+    --det-soft: #dcefe9;
+    --llm: #a4650a;         /* amber — LLM / probabilistic */
+    --llm-soft: #f6ead3;
+    --danger: #a8392b;      /* brick — gap / bug / attack */
+    --danger-soft: #f4dfdb;
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --measure: 68ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1117;
+      --surface: #151a22;
+      --surface-2: #1b212b;
+      --ink: #e7ebf1;
+      --muted: #9aa4b2;
+      --faint: #6f7988;
+      --line: #262d39;
+      --line-strong: #333c4a;
+      --accent: #93a0ff;
+      --accent-soft: #20263c;
+      --det: #45b79c;
+      --det-soft: #14261f;
+      --llm: #e0a44c;
+      --llm-soft: #2c2110;
+      --danger: #e68374;
+      --danger-soft: #2e1713;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eaedf2; --surface: #ffffff; --surface-2: #f3f5f8; --ink: #161a22;
+    --muted: #58616f; --faint: #828b98; --line: #dce1e9; --line-strong: #c3cad5;
+    --accent: #2f3aa3; --accent-soft: #e7e9f6; --det: #0e7c66; --det-soft: #dcefe9;
+    --llm: #a4650a; --llm-soft: #f6ead3; --danger: #a8392b; --danger-soft: #f4dfdb;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1117; --surface: #151a22; --surface-2: #1b212b; --ink: #e7ebf1;
+    --muted: #9aa4b2; --faint: #6f7988; --line: #262d39; --line-strong: #333c4a;
+    --accent: #93a0ff; --accent-soft: #20263c; --det: #45b79c; --det-soft: #14261f;
+    --llm: #e0a44c; --llm-soft: #2c2110; --danger: #e68374; --danger-soft: #2e1713;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--serif); font-size: 18px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .wrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 0; max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- sidebar nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 34px 22px 40px; border-right: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  }
+  nav.toc .brand { font-weight: 700; letter-spacing: .02em; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+  nav.toc .brand small { display:block; color: var(--faint); font-weight: 400; letter-spacing:.06em; text-transform: uppercase; font-size: 10px; margin-top: 6px; }
+  nav.toc ol { list-style: none; margin: 22px 0 0; padding: 0; counter-reset: sec; }
+  nav.toc li { margin: 0 0 3px; }
+  nav.toc a {
+    display: flex; gap: 9px; padding: 5px 8px; border-radius: 6px; color: var(--muted);
+    text-decoration: none; counter-increment: sec;
+  }
+  nav.toc a::before { content: counter(sec, decimal-leading-zero); color: var(--faint); }
+  nav.toc a:hover { background: var(--surface-2); color: var(--ink); }
+  nav.toc a.intro::before { content: "→"; }
+  nav.toc .legend { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 9px; }
+  nav.toc .legend b { display:block; color: var(--faint); text-transform: uppercase; letter-spacing:.08em; font-size:10px; margin-bottom:2px; }
+  nav.toc .legend span { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  nav.toc .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  main { padding: 0 0 120px; min-width: 0; }
+
+  /* ---------- hero ---------- */
+  header.hero { padding: 60px 52px 44px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 20px; }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: 46px; line-height: 1.05; letter-spacing: -.015em; margin: 0 0 18px; text-wrap: balance; }
+  h1 em { font-style: italic; color: var(--muted); font-weight: 400; }
+  .lede { font-size: 20px; line-height: 1.55; color: var(--ink); max-width: 60ch; margin: 0 0 8px; }
+  .lede--muted { color: var(--muted); font-size: 18px; max-width: 62ch; }
+  .paperref { font-family: var(--mono); font-size: 12px; color: var(--faint); margin-top: 26px; line-height: 1.7; }
+  .paperref b { color: var(--muted); font-weight: 600; }
+
+  /* ---------- sections ---------- */
+  section { padding: 48px 52px; border-bottom: 1px solid var(--line); scroll-margin-top: 12px; }
+  section > .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin: 0 0 10px; }
+  h2 { font-family: var(--serif); font-weight: 700; font-size: 31px; line-height: 1.12; letter-spacing: -.01em; margin: 0 0 6px; text-wrap: balance; }
+  h2 .num { font-family: var(--mono); font-size: 16px; color: var(--accent); margin-right: 12px; font-weight: 500; }
+  h3 { font-family: var(--serif); font-weight: 700; font-size: 21px; margin: 34px 0 6px; letter-spacing: -.005em; }
+  p { max-width: var(--measure); }
+  section p, section li { color: var(--ink); }
+  .sub { color: var(--muted); max-width: var(--measure); margin-top: 0; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  a:hover { border-bottom-color: var(--accent); }
+  .code-ref { font-family: var(--mono); font-size: .82em; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+
+  ul, ol { max-width: var(--measure); padding-left: 22px; }
+  li { margin: 4px 0; }
+  li::marker { color: var(--faint); }
+
+  /* ---------- rail blocks (deterministic / llm / danger) ---------- */
+  .rail { border-left: 3px solid var(--line-strong); background: var(--surface); border-radius: 0 10px 10px 0; padding: 18px 22px; margin: 24px 0; max-width: var(--measure); }
+  .rail .tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .rail .tag::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: currentColor; }
+  .rail p:last-child { margin-bottom: 0; }
+  .rail p { max-width: none; }
+  .rail.det { border-color: var(--det); background: color-mix(in srgb, var(--det-soft) 55%, var(--surface)); }
+  .rail.det .tag { color: var(--det); }
+  .rail.llm { border-color: var(--llm); background: color-mix(in srgb, var(--llm-soft) 55%, var(--surface)); }
+  .rail.llm .tag { color: var(--llm); }
+  .rail.danger { border-color: var(--danger); background: color-mix(in srgb, var(--danger-soft) 50%, var(--surface)); }
+  .rail.danger .tag { color: var(--danger); }
+  .rail.note { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); }
+  .rail.note .tag { color: var(--accent); }
+
+  /* ---------- code ---------- */
+  pre { margin: 18px 0; padding: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  pre .fil { font-family: var(--mono); font-size: 11px; color: var(--faint); padding: 9px 16px; border-bottom: 1px solid var(--line); letter-spacing: .03em; display:flex; justify-content: space-between; }
+  pre .fil .lang { color: var(--llm); }
+  pre code { display: block; padding: 15px 18px; font-family: var(--mono); font-size: 13px; line-height: 1.62; color: var(--ink); white-space: pre; }
+  code { font-family: var(--mono); }
+  .c-com { color: var(--faint); font-style: italic; }
+  .c-key { color: var(--accent); }
+  .c-str { color: var(--det); }
+  .c-fn  { color: var(--llm); }
+  .c-hi  { background: color-mix(in srgb, var(--llm-soft) 70%, transparent); border-radius: 3px; padding: 0 2px; }
+
+  /* prompt specimen */
+  .specimen { margin: 22px 0; border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; }
+  .specimen .head { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; color: var(--muted); }
+  .specimen .head .pill { color: var(--llm); font-weight: 600; }
+  .specimen .body { padding: 18px 20px; background: var(--surface); font-family: var(--mono); font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: var(--ink); overflow-x: auto; }
+  .specimen .body .lbl { color: var(--llm); font-weight: 600; }
+  .specimen .body .tk  { color: var(--accent); }
+  .specimen .body .num { color: var(--det); }
+  .specimen .body .xml { color: var(--faint); }
+
+  /* pipeline diagram */
+  .pipeline { display: grid; gap: 10px; margin: 26px 0; max-width: none; }
+  .pl-row { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: stretch; }
+  .pl-step { border-radius: 9px; border: 1px solid var(--line); background: var(--surface); padding: 12px 16px; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: baseline; }
+  .pl-step .t { font-weight: 700; font-size: 16px; }
+  .pl-step .d { color: var(--muted); font-size: 14.5px; grid-column: 1; max-width: 62ch; }
+  .pl-step .f { font-family: var(--mono); font-size: 11px; color: var(--faint); grid-column: 2; grid-row: 1 / span 2; text-align: right; align-self: center; }
+  .pl-num { font-family: var(--mono); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #fff; }
+  .pl-det .pl-num { background: var(--det); } .pl-det .pl-step { border-left: 3px solid var(--det); }
+  .pl-llm .pl-num { background: var(--llm); } .pl-llm .pl-step { border-left: 3px solid var(--llm); }
+  .pl-acc .pl-num { background: var(--accent); } .pl-acc .pl-step { border-left: 3px solid var(--accent); }
+
+  /* flow chips for the walkthrough */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 24px 0; max-width: none; }
+  .flow .chip { flex: 1 1 150px; min-width: 140px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface); position: relative; }
+  .flow .chip .s { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+  .flow .chip .m { font-weight: 700; font-size: 15px; margin-top: 3px; }
+  .flow .chip .x { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .flow .chip.det { border-bottom: 3px solid var(--det); }
+  .flow .chip.llm { border-bottom: 3px solid var(--llm); }
+
+  /* tables */
+  .tbl-scroll { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td .code-ref { font-size: 12px; }
+  .st { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .st.ok { color: var(--det); background: var(--det-soft); }
+  .st.gap { color: var(--danger); background: var(--danger-soft); }
+  .st.part { color: var(--llm); background: var(--llm-soft); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; max-width: none; }
+  .card { border: 1px solid var(--line); border-radius: 11px; padding: 18px 20px; background: var(--surface); }
+  .card h4 { margin: 0 0 8px; font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .card p { max-width: none; font-size: 15px; margin: 0 0 8px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  .keyeq { font-family: var(--mono); font-size: 15px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; display: inline-block; color: var(--ink); }
+
+  .footnote { color: var(--muted); font-size: 15px; }
+  .big-quote { font-family: var(--serif); font-style: italic; font-size: 23px; line-height: 1.4; color: var(--ink); max-width: 30ch; border-left: 3px solid var(--accent); padding-left: 20px; margin: 26px 0; }
+
+  /* theme toggle */
+  .toggle { position: fixed; top: 16px; right: 18px; z-index: 20; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 7px 12px; border-radius: 20px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .toggle:hover { color: var(--ink); border-color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; }
+    nav.toc { display: none; }
+    header.hero, section { padding-left: 24px; padding-right: 24px; }
+    h1 { font-size: 36px; }
+    .two, .pl-step { grid-template-columns: 1fr; }
+    .pl-step .f { grid-row: auto; text-align: left; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+
+<button class="toggle" id="themeToggle" aria-label="Toggle light or dark theme">◑ theme</button>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Table of contents">
+    <div class="brand">DeFiScope<small>Annotated for LLM newcomers</small></div>
+    <ol>
+      <li><a class="intro" href="#start">Start here</a></li>
+      <li><a href="#problem">The problem</a></li>
+      <li><a href="#idea">The one big idea</a></li>
+      <li><a href="#llm101">LLM 101, in this code</a></li>
+      <li><a href="#walk">Watch one real attack</a></li>
+      <li><a href="#finetune">Fine-tuning, up close</a></li>
+      <li><a href="#patterns">The 8 attack patterns</a></li>
+      <li><a href="#eval">How they proved it</a></li>
+      <li><a href="#repro">What's real vs. hidden</a></li>
+      <li><a href="#build">Build your own</a></li>
+      <li><a href="#glossary">Pocket glossary</a></li>
+    </ol>
+    <div class="legend">
+      <b>Colour code</b>
+      <span><i class="dot" style="background:var(--det)"></i> Deterministic code</span>
+      <span><i class="dot" style="background:var(--llm)"></i> LLM / learned</span>
+      <span><i class="dot" style="background:var(--danger)"></i> Gap / bug / attack</span>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero" id="start">
+      <p class="eyebrow">A guided reading of the DeFiScope artifact · ASE 2025</p>
+      <h1>DeFiScope, <em>annotated.</em></h1>
+      <p class="lede">How a research tool uses a large language model to catch DeFi price-manipulation attacks — explained from zero, using the tool's own code and one real transaction it was run on.</p>
+      <p class="lede--muted">You already know a little DeFi. You know nothing about LLMs yet. By the end you'll know what fine-tuning, prompts, tokens, and chain-of-thought actually are — not as abstractions, but as specific lines in this repository — and you'll be able to build something like it yourself.</p>
+      <p class="paperref">
+        <b>Paper:</b> Zhong, Wu, Liu et&nbsp;al., <i>"Detecting Various DeFi Price Manipulations with LLM Reasoning"</i>, IEEE/ACM ASE 2025.<br>
+        <b>Code:</b> github.com/AIS2Lab/DeFiScope &nbsp;·&nbsp; <b>This guide pairs paper sections (§) with real files (<span class="code-ref">utils/…</span>).</b><br>
+        <b>Everything quoted here is verbatim</b> — the prompts were produced by actually running the fixed tool on the AES attack.
+      </p>
+    </header>
+
+    <!-- ============ 1. PROBLEM ============ -->
+    <section id="problem">
+      <p class="kicker">Why this tool exists</p>
+      <h2><span class="num">01</span>The problem: prices you can shove around</h2>
+      <p class="sub">A one-screen refresher, because the whole design follows from it.</p>
+
+      <p>In DeFi there is no order book and no exchange setting the price. A pool holds two token reserves, and an equation turns those reserves into a price. The classic one is the <strong>Constant Product Market Maker</strong>:</p>
+      <p><span class="keyeq">x · y = k</span> &nbsp;→&nbsp; instantaneous price of token&nbsp;x, in units of&nbsp;y, is <span class="keyeq">P = y / x</span>.</p>
+      <p>So if you dump a huge amount of token&nbsp;x into the pool, <code>x</code> shoots up, and the pool's own formula now reports token&nbsp;x as <em>cheaper</em>. That is not a bug — it is how the price is defined. An <strong>attacker</strong> exploits it in three beats: distort a pool's balances, do something valuable while the reported price is wrong (borrow, redeem, sell into a second pool), then unwind. Flash loans make the capital free.</p>
+
+      <div class="rail danger">
+        <span class="tag">The gap in prior tools</span>
+        <p>State-of-the-art detectors (DeFiRanger, DeFort) work by computing the <em>exchange rate between two tokens</em> and watching it move. That only works when the price follows a standard formula they can compute. But <strong>44.2% of the 95 attacks the authors collected used non-standard, custom price models</strong> — a median-of-oracles, an exponential curve, a lending formula reading multiple balances. For those, "the exchange rate" isn't even well-defined. The paper's motivating case, UwULend ($19.3M), moved sUSDe's price by only ~4%, well inside DeFort's "normal" band, and hid the manipulation inside complex WETH deposits that DeFiRanger couldn't trace.</p>
+      </div>
+
+      <p>The authors' insight: you don't need to <em>compute</em> the price. You only need to know which <strong>direction</strong> it moved. And direction can be read off two things a human analyst would use — the <strong>pricing code</strong> and the <strong>balance changes</strong> — without any protocol-specific math. That "read the code, reason about direction" step is exactly what a language model is good at and ordinary program analysis is bad at. Hence: bring in an LLM.</p>
+    </section>
+
+    <!-- ============ 2. BIG IDEA ============ -->
+    <section id="idea">
+      <p class="kicker">The architecture in one sentence</p>
+      <h2><span class="num">02</span>The LLM is a sensor. Plain code is the judge.</h2>
+      <p class="sub">This split is the most important thing to understand about the whole system — and about most well-built LLM tools.</p>
+
+      <p class="big-quote">The model never decides "attack or not". It answers one narrow perception question, and deterministic code does everything else.</p>
+
+      <p>The LLM is asked exactly one kind of thing, over and over: <em>"Given this pricing code and these balance changes, did token&nbsp;T's price go up or down?"</em> That's it. Recovering who did what, linking the steps, matching attack shapes, producing the verdict — all of that is ordinary Python you could step through in a debugger. Look at how little surface the model actually touches:</p>
+
+      <div class="pipeline">
+        <div class="pl-row pl-det"><div class="pl-num">1</div><div class="pl-step"><span class="t">Fetch &amp; decode the transaction</span><span class="f">transaction.py</span><span class="d">One RPC call (<code>debug_traceTransaction</code>) returns the whole nested call tree with event logs. Decode calldata &amp; Transfer/Mint/Burn events into structured records.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">2</div><div class="pl-step"><span class="t">Slice into "user invocations"</span><span class="f">tranxToUserCalls.py</span><span class="d">Cut the tree wherever the attacker's contract starts a new external call. Each slice is one unit of reasoning.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">3</div><div class="pl-step"><span class="t">Build the Transfer Graph</span><span class="f">transferGraph.py</span><span class="d">Accounts are nodes; token transfers are timestamped directed edges. Pure graph theory.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">4</div><div class="pl-step"><span class="t">Recover DeFi operations</span><span class="f">defiAction.py</span><span class="d">Search the graph for Swap / Deposit / Withdraw / Borrow / Stake / Claim. E.g. a Swap is a cycle of transfers that leaves and returns to the user with a different token.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">5</div><div class="pl-step"><span class="t">Extract the pricing code</span><span class="f">function.py</span><span class="d">Keyword-match function names (<code>price</code>, <code>getAmount</code>, …), download verified source, use Slither to pull the relevant functions' text.</span></div></div>
+        <div class="pl-row pl-llm"><div class="pl-num">6</div><div class="pl-step"><span class="t">Build the prompt</span><span class="f">priceChangeInference.py</span><span class="d">Glue the code + balance-change sentences + a strict answer template into one text string.</span></div></div>
+        <div class="pl-row pl-llm"><div class="pl-num">7</div><div class="pl-step"><span class="t">Ask the fine-tuned LLM</span><span class="f">← the only learned step</span><span class="d">The model extracts the price model and scores four statements ("price up / price down", per token) from 1–10. This is the entire footprint of machine learning in the tool.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">8</div><div class="pl-step"><span class="t">Turn scores into a direction</span><span class="f">priceChangeInference.py</span><span class="d">Higher of the up/down pair wins → INCREASE / DECREASE / UNCERTAIN. A one-line argmax, no threshold.</span></div></div>
+        <div class="pl-row pl-det"><div class="pl-num">9</div><div class="pl-step"><span class="t">Match against 8 attack patterns</span><span class="f">detector.py</span><span class="d">Hand-written rules: "operation A, then a manipulated price in pool P, then operation C" → fire.</span></div></div>
+      </div>
+
+      <div class="rail note">
+        <span class="tag">Why you should care about this split</span>
+        <p>When the paper reports 96% precision and zero false alarms on 96,800 benign transactions, <strong>most of that reliability comes from the deterministic gates, not the model.</strong> The fuzzy component is boxed into one well-defined sub-question with a machine-checkable output. That is the reusable lesson: <em>use the LLM only where code can't go, and make its job as small and as checkable as possible.</em></p>
+      </div>
+
+      <h3>The clever data structure underneath: the Transfer Graph</h3>
+      <p>Steps 3–4 deserve a closer look, because recovering "who did what" is the paper's <em>second</em> contribution (§V) and the reason it beats the previous best tool. Every token transfer becomes a timestamped directed edge — sender → receiver — and accounts are nodes. Then each DeFi operation is just a graph shape:</p>
+      <ul>
+        <li><strong>Swap</strong> = a cycle that leaves a user account and returns with a <em>different</em> token, along edges of strictly increasing time.</li>
+        <li><strong>Deposit</strong> = a transfer into a pool <em>plus</em> a mint of a receipt token back to the user.</li>
+        <li><strong>Borrow</strong> = a mint of a debt token + assets flowing out, with nothing flowing in.</li>
+      </ul>
+      <p>DeFiRanger, the prior state of the art, used a "Cash Flow Tree" that could only join transfers touching the user directly — so a swap routed through several relayer contracts (U → A → B → C → U) broke it. The Transfer Graph treats relayers as ordinary intermediate nodes. On the authors' 1,000-transaction test this lifted operation-recovery recall from <strong>0.559 to 0.912</strong>, and much of that gap is exactly these multi-relayer swaps. This is the "who did what" half of detection — entirely deterministic, no model involved.</p>
+    </section>
+
+    <!-- ============ 3. LLM 101 ============ -->
+    <section id="llm101">
+      <p class="kicker">The vocabulary, grounded in real lines</p>
+      <h2><span class="num">03</span>Everything you need to know about LLMs, taught through this repo</h2>
+      <p class="sub">Each idea below is defined once, then pinned to the exact place it appears in DeFiScope. Nothing here is abstract.</p>
+
+      <h3>First: what a large language model actually is</h3>
+      <p>The one-paragraph mental model, before anything else. An LLM is a <strong>next-token predictor</strong>: you give it some text, it outputs a probability for every possible next token, picks one, appends it, and repeats. That single loop is the whole mechanism — "reasoning", "answering", "writing Solidity" are all just very good next-token prediction.</p>
+      <p>Where does the skill come from? <strong>Pretraining.</strong> Before anyone fine-tunes anything, the model is trained on an enormous slice of the internet — books, code, docs — by playing "guess the next token" billions of times. That is how GPT-3.5 and Phi-3 already know English, already know Solidity syntax, and already know the <span class="keyeq">x·y=k</span> rule: nobody in this project taught them that, it came free from pretraining. A model fresh out of pretraining is called a <strong>base model</strong>.</p>
+      <p>DeFiScope's problem is that a base model knows the concepts but doesn't reliably <em>apply</em> them in the rigid format the tool can parse. Closing that gap is exactly what <strong>fine-tuning</strong> (§5) does. Hold this frame as you read the rest: everything is either feeding the predictor better input text (a <em>prompt</em>) or nudging what it tends to predict (<em>fine-tuning</em>).</p>
+
+      <h3>A "token" is the unit of text the model reads and is billed by</h3>
+      <p>An LLM doesn't see characters or words — it sees <strong>tokens</strong>, sub-word chunks (roughly ¾ of an English word each). Two consequences run through the whole system. First, every model has a <strong>context window</strong>: a hard cap on tokens per request. Second, API pricing is <em>per token</em>. That's why the pipeline never pastes a raw transaction (which would be hundreds of thousands of tokens) into the prompt — it compresses everything to a few sentences. You can see the window arithmetic literally spelled out for the local model:</p>
+      <pre><span class="fil"><span>utils/gen_with_local_model.py</span><span class="lang">python</span></span><code><span class="c-key">new_tokens</span> = <span class="c-hi">128000</span> - prompt_length  <span class="c-com"># Phi-3's 128k-token window minus the prompt</span>
+<span class="c-key">if</span> new_tokens &lt;= <span class="c-hi">0</span>:
+    <span class="c-key">raise</span> ValueError(<span class="c-str">"The prompt length exceeds or equals 128k tokens!"</span>)</code></pre>
+      <p class="footnote">The paper's headline cost, <strong>$0.0107 per transaction</strong>, is just (prompt tokens + answer tokens) × the per-token price. Prompt size is engineered, not accidental.</p>
+
+      <h3>A "prompt" is just a string your program builds</h3>
+      <p>There is no magic API for "give the model some code and some numbers". You concatenate everything you want it to know into one text string. Here is the actual template DeFiScope wraps around a closed-source pool — read it as ordinary string-building:</p>
+      <pre><span class="fil"><span>utils/priceChangeInference.py &nbsp;·&nbsp; the "Type-II" prompt</span><span class="lang">python</span></span><code>instruction = <span class="c-str">"""
+{pool_address} is the address of a liquidity pool. The price model of
+the pool aligns with the Constant Product Market Maker (CPMM). You will
+be provided with some changes of tokens' balance inside the pool. Only
+based on the given information, ... give me evaluation scores from 1 to
+10: {statements}. There is no need for quantitative calculation."""</span></code></pre>
+      <p>Two prompt shapes exist, and the routing between them is plain Python, not the model's choice:</p>
+      <div class="two">
+        <div class="card"><h4>Type-I · open source</h4><p>Verified pricing code was found. Paste the actual Solidity functions and ask the model to extract the price model from them, then score. <em>Best grounding.</em></p></div>
+        <div class="card"><h4>Type-II · closed source</h4><p>No code, but the graph proved it's a 2-token pool. Just <em>assert</em> "this is a CPMM" and let the model apply the x·y=k rule it already learned in pretraining.</p></div>
+      </div>
+
+      <h3>"System" vs "user" messages</h3>
+      <p>Chat models take a list of messages with roles. A <strong>system</strong> message sets standing behavior; the <strong>user</strong> message carries the task. DeFiScope's system message is a one-liner that puts the model in character:</p>
+      <pre><span class="fil"><span>utils/priceChangeInference.py</span><span class="lang">python</span></span><code>messages=[
+  {<span class="c-str">"role"</span>: <span class="c-str">"system"</span>, <span class="c-str">"content"</span>: <span class="c-str">"You are a price oracle of DeFi protocols,
+     your job is to evaluate the price change of assets..."</span>},
+  {<span class="c-str">"role"</span>: <span class="c-str">"user"</span>,   <span class="c-str">"content"</span>: prompt}   <span class="c-com"># the string built above</span>
+]</code></pre>
+
+      <h3>"Temperature" is the randomness dial</h3>
+      <p>At each step the model produces a probability distribution over the next token. <strong>Temperature</strong> rescales it before sampling. At <code>temperature=0</code> the model always takes the single most likely token, so the same input gives the same output every time — essential for a security tool whose verdict must be reproducible.</p>
+      <pre><span class="fil"><span>utils/priceChangeInference.py</span><span class="lang">python</span></span><code>temperature = <span class="c-hi">0</span>      <span class="c-com"># deterministic: always the likeliest token</span>
+top_p       = <span class="c-hi">1</span>      <span class="c-com"># no nucleus filtering</span></code></pre>
+      <p class="footnote">The local model uses <code>temperature=1e-8</code> instead of exactly 0 — a quirk, because HuggingFace's sampler rejects a literal 0. Same intent.</p>
+
+      <h3>A "fine-tuned model" is a private, specialized copy — and it's one string</h3>
+      <p>We'll go deep in §6. For now, know that this single line is where all the machine learning enters, and it's why the repo can't be run as-is by anyone else:</p>
+      <pre><span class="fil"><span>utils/priceChangeInference.py &nbsp;·&nbsp; original line 233</span><span class="lang">python</span></span><code>model = <span class="c-str">"ft:gpt-3.5-turbo-1106:metatrust-labs::8zFctmxs"</span>  <span class="c-com"># fine-tuned</span></code></pre>
+      <p>Decode the string: <code>ft:</code> = fine-tuned, <code>gpt-3.5-turbo-1106</code> = the base model, <code>metatrust-labs</code> = the owning organization. That model lives inside the authors' OpenAI account; <strong>your key gets "model not found"</strong>. (Our fixed copy reads it from an environment variable instead — see §8.)</p>
+
+      <div class="rail danger">
+        <span class="tag">The failure mode every LLM engineer must internalize</span>
+        <p>LLM output is <strong>untyped text</strong>, and API calls fail. DeFiScope catches any API error and substitutes zero scores → every direction becomes UNCERTAIN → the verdict becomes "not an attack". So a wrong key or an inaccessible model makes the tool <em>confidently report every attack as benign</em>, with no crash. When you evaluate any LLM tool, first prove the model calls actually succeed before you trust a single recall number.</p>
+      </div>
+    </section>
+
+    <!-- ============ 4. WALKTHROUGH ============ -->
+    <section id="walk">
+      <p class="kicker">End to end, on a transaction we actually ran</p>
+      <h2><span class="num">04</span>Watch one real attack flow through the machine</h2>
+      <p class="sub">The AES exploit on BSC (7 Dec 2022, ~$60k, row&nbsp;1 of the paper's benchmark). Everything below came out of running the tool.</p>
+
+      <p>We ran <code>python main.py -tx 0xca4d0d… -bp bsc</code>. Even with no OpenAI key, steps 1–6 execute fully. Here is what each stage produced:</p>
+
+      <div class="flow">
+        <div class="chip det"><div class="s">Step 1–2</div><div class="m">133 → 39 slices</div><div class="x">Trace decoded; sliced into user invocations, then deduplicated repeated loops.</div></div>
+        <div class="chip det"><div class="s">Step 3–4</div><div class="m">Swap recovered</div><div class="x">The transfer graph found swap cycles through the AES/USDT pool <code>0x40eD…07e3</code>.</div></div>
+        <div class="chip det"><div class="s">Step 5</div><div class="m">No source</div><div class="x">No explorer key → pricing code couldn't be pulled → fall back to Type-II (CPMM).</div></div>
+        <div class="chip llm"><div class="s">Step 6</div><div class="m">Prompt built</div><div class="x">Balance deltas rendered as English, wrapped in the CPMM template.</div></div>
+      </div>
+
+      <p>This is a <strong>real prompt the tool generated</strong> for one AES swap — dumped straight to <code>prompts_dump/</code>. Read it as the model would: an assertion about the pool, an observed balance change, four statements to score, and a rigid answer shape.</p>
+
+      <div class="specimen">
+        <div class="head"><span>prompts_dump/prompt_53277611.txt</span><span class="pill">▲ LLM PROMPT · verbatim</span></div>
+        <div class="body">0x40eD…07e3 is the address of a liquidity pool. The price model of the pool <span class="lbl">aligns with the Constant Product Market Maker (CPMM)</span>. ... give me evaluation scores from 1 to 10:
+  1) The price of <span class="tk">AES</span> relative to <span class="tk">USDT</span> ... <span class="lbl">increases</span> after change
+  2) The price of <span class="tk">AES</span> relative to <span class="tk">USDT</span> ... <span class="lbl">decreases</span> after change
+  3) The price of <span class="tk">USDT</span> relative to <span class="tk">AES</span> ... <span class="lbl">increases</span> after change
+  4) The price of <span class="tk">USDT</span> relative to <span class="tk">AES</span> ... <span class="lbl">decreases</span> after change.
+There is no need for quantitative calculation.
+
+<span class="xml">&lt;change&gt;</span>
+The balance of <span class="tk">AES</span> in contract 0x40eD…07e3 <span class="lbl">increases</span> by <span class="num">1057057733181607349322782</span>
+<span class="xml">&lt;/change&gt;</span>
+
+<span class="xml">&lt;answer&gt;</span>
+1) Evaluation score of ... AES ... increases after change: <span class="num">{score}</span>
+2) Evaluation score of ... AES ... decreases after change: <span class="num">{score}</span>
+3) ...
+<span class="xml">&lt;/answer&gt;</span></div>
+      </div>
+
+      <p>Now the reasoning the fine-tuned model is trained to do: AES balance <em>increased</em> massively, so by x·y=k there's more AES in the pool → AES is <em>cheaper</em> → statement&nbsp;2 ("AES decreases") scores high (say 8), statement&nbsp;1 low (say 2). A regex lifts the integers out of the reply, and this converts them to a direction — note there is <strong>no absolute threshold</strong>, just which of the pair is larger:</p>
+      <pre><span class="fil"><span>utils/priceChangeInference.py &nbsp;·&nbsp; generate_finally_prediction</span><span class="lang">python</span></span><code><span class="c-key">if</span>   increase_score &gt; decrease_score: tendency = Tendency.<span class="c-fn">INCREASE</span>
+<span class="c-key">elif</span> increase_score &lt; decrease_score: tendency = Tendency.<span class="c-fn">DECREASE</span>
+<span class="c-key">else</span>:                                tendency = Tendency.<span class="c-fn">UNCERTAIN</span></code></pre>
+
+      <p>Finally the deterministic judge. DeFiScope tests <strong>ordered triples of user calls</strong> — (buy, manipulate, sell) — and fires only if the middle call carried a manipulated price <em>in the same pool</em> the outer calls touch. For AES: buy AES cheap, having pushed its price down, then sell into the mispriced pool. That is <strong>Pattern&nbsp;I</strong>, and it's a hand-written rule in <code>detector.py</code>, not anything the model concluded.</p>
+
+      <div class="rail det">
+        <span class="tag">What "no key" proves</span>
+        <p>Because steps 1–9 minus the model are pure code, the no-key run exercised the entire program-analysis half of the paper — trace decoding, graph construction, Swap recovery on a real pool, prompt generation — and emitted six well-formed prompts. The only thing missing is the model's up/down call. That's the cleanest possible demonstration of the sensor/judge split.</p>
+      </div>
+    </section>
+
+    <!-- ============ 5. FINE-TUNING ============ -->
+    <section id="finetune">
+      <p class="kicker">The heart of the contribution &nbsp;·&nbsp; paper §IV</p>
+      <h2><span class="num">05</span>Fine-tuning, explained from scratch</h2>
+      <p class="sub">This is the part the paper is proudest of, and the part a newcomer most needs demystified. We'll define it, show the actual training data, and explain why it's novel.</p>
+
+      <h3>What fine-tuning <em>is</em></h3>
+      <p>A pretrained model (GPT-3.5, Phi-3) already knows English and some Solidity. <strong>Fine-tuning</strong> means continuing its training on a small set of your own <em>(input, desired-output)</em> examples, so that its default behavior on your task matches those examples. Because every input ships with the correct output, this is called <strong>Supervised Fine-Tuning (SFT)</strong>. In this repo, one example is literally one row of a CSV:</p>
+
+      <div class="specimen">
+        <div class="head"><span>dataset/training_set.csv &nbsp;·&nbsp; row 1 — the "input" column</span><span class="pill">▲ TRAINING DATA · verbatim</span></div>
+        <div class="body"><span class="lbl">Instruction 1:</span> The following is related price calculation functions.
+You are required to extract the price calculation model.
+
+  function <span class="tk">swapExactTokensForTokens</span>(uint amountIn, ... ) {
+      amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
+      ...
+  }
+  function <span class="tk">getAmountOut</span>(uint amountIn, uint reserveIn, uint reserveOut) {
+      <span class="xml">// the x*y=k constant-product formula, with the 997/1000 fee</span>
+      ...
+  }
+
+<span class="lbl">Instruction 2:</span> ... evaluate ... scores from 1 to 10:
+  1) input token price increases   2) input token price decreases
+  3) output token price increases  4) output token price decreases
+<span class="xml">&lt;change&gt;</span> input balance increases by ...; output balance decreases by ... <span class="xml">&lt;/change&gt;</span></div>
+      </div>
+
+      <h3>"Chain-of-Thought" — the trick that makes it generalize</h3>
+      <p>Look at the paired <strong>response</strong> the model is trained to produce. It does <em>not</em> jump to four numbers. It reasons first, then answers:</p>
+      <div class="specimen">
+        <div class="head"><span>dataset/training_set.csv &nbsp;·&nbsp; row 1 — the "response" column</span><span class="pill">▲ THE TARGET · verbatim, abridged</span></div>
+        <div class="body">To evaluate the statements ... we analyze how the changes affect the
+reserves used in the <span class="tk">getAmountOut</span> function.
+
+1. The balance of input token increases, meaning its reserve increases.
+2. The balance of output token decreases, meaning its reserve decreases.
+
+An increase in the reserve of the input token generally leads to a
+<span class="lbl">decrease in its price</span> relative to the output token ...
+
+1) input price increases →  <span class="num">Evaluation Score: 2</span>
+2) input price decreases →  <span class="num">Evaluation Score: 8</span>
+   ...</div>
+      </div>
+      <p>Training on the <em>reasoning</em>, not just the final scores, is what "<strong>CoT-style fine-tuning</strong>" means. It teaches the model the <em>derivation</em> ("more reserve → cheaper"), which is a general principle — and that is why a model trained only on Uniswap-V2 CPMM data can later score custom price models it never saw.</p>
+
+      <h3>How the model learns only the answer</h3>
+      <p>A subtle but essential mechanic. During training you show the model <em>prompt + response</em> concatenated, but you only want it to learn to produce the <em>response</em>. That's done by masking the prompt's tokens with the sentinel <code>-100</code>, which PyTorch's loss function ignores:</p>
+      <pre><span class="fil"><span>fine-tuning/fine-tuning.py</span><span class="lang">python</span></span><code>labels[<span class="c-str">"input_ids"</span>][i] = <span class="c-hi">[-100] * len(prompt_tokens)</span> + response_tokens
+<span class="c-com">#                        ^ ignore the prompt      ^ learn to produce this</span></code></pre>
+      <p>So gradient descent only ever rewards reproducing the desired answer given the prompt — never parroting the question back. This one line is the definition of instruction SFT in practice.</p>
+
+      <h3>Two ways to fine-tune — the repo shows both</h3>
+      <div class="two">
+        <div class="card"><h4><span style="color:var(--llm)">●</span> OpenAI-hosted (the paper's main results)</h4><p>You upload the examples; OpenAI trains on their servers; you get back an opaque model <em>id</em> and nothing else. No weights, no control. That id — <code>ft:gpt-3.5-turbo-1106:metatrust-labs::…</code> — is all that survives in the repo, usable only by the authors' key. <strong>This is the single biggest reproducibility gap.</strong></p></div>
+        <div class="card"><h4><span style="color:var(--det)">●</span> Local LoRA (shipped &amp; runnable)</h4><p><code>fine-tuning/fine-tuning.py</code> fine-tunes an open Phi-3 model on your own hardware, and the adapter weights are yours to keep and share.</p></div>
+      </div>
+
+      <h3>LoRA: cheap fine-tuning, in one picture</h3>
+      <p>Phi-3-medium has ~14 billion parameters; updating all of them needs enormous memory. <strong>LoRA</strong> (Low-Rank Adaptation) freezes the entire base model and trains tiny "adapter" matrices bolted onto a few layers — a fraction of a percent of the weights:</p>
+      <pre><span class="fil"><span>fine-tuning/fine-tuning.py</span><span class="lang">python</span></span><code>lora_config = LoraConfig(
+    r=<span class="c-hi">4</span>,                              <span class="c-com"># adapter rank — tiny</span>
+    lora_alpha=<span class="c-hi">8</span>,
+    target_modules=[<span class="c-str">"o_proj"</span>, <span class="c-str">"qkv_proj"</span>],  <span class="c-com"># only the attention layers</span>
+    task_type=TaskType.CAUSAL_LM,
+)</code></pre>
+      <p>That's why the released artifact is a few-MB adapter, and why loading it (<code>utils/load_model.py</code>) first downloads the full base model and then <em>layers the adapter on top</em>. LoRA is the reason "fine-tune your own 14B model" is feasible on a handful of GPUs instead of a datacenter.</p>
+
+      <div class="rail llm">
+        <span class="tag">Why the fine-tuning matters — the money result</span>
+        <p>The ablation is the paper's strongest evidence. Fine-tuning on <strong>CPMM data only</strong> lifted detection of attacks on <strong>custom price models</strong> from 60% to 93.3% for GPT-3.5 — a model that never saw a custom formula got dramatically better at them. That's <em>transfer</em>: CoT taught transferable "reserve-ratio" reasoning, not memorized answers. Overall, fine-tuning raised detection by up to 31% over the same model un-tuned. The base model already knows what a price is; fine-tuning makes it <em>reliably answer in the exact scored format the downstream code can parse</em>, every time.</p>
+      </div>
+
+      <div class="rail note">
+        <span class="tag">Standard ML discipline you can point to</span>
+        <p>The 1,000 synthesized samples are split <strong>800 / 100 / 100</strong> (train / eval / test). Train on 800; after each pass, measure loss on the 100 eval samples to catch overfitting; report final quality on the 100 test samples the training never touched. The labels themselves came from a <em>program</em>, not humans: Foundry fuzzed real swaps against a Uniswap-V2 pool, so x·y=k gives the ground-truth direction for free (500 "inflate" + 500 "deflate" pairs).</p>
+      </div>
+    </section>
+
+    <!-- ============ 6. PATTERNS ============ -->
+    <section id="patterns">
+      <p class="kicker">From price-direction to verdict &nbsp;·&nbsp; paper Table I</p>
+      <h2><span class="num">06</span>The eight attack patterns</h2>
+      <p class="sub">A price wobble alone is meaningless — a normal swap moves prices too. It becomes an <em>attack</em> only inside a shape.</p>
+      <p>DeFiScope enumerates ordered triples of user calls and checks each against eight hard-coded patterns, grouped into four attack types. In every one, the middle (or first) step is where the LLM said a price was manipulated, and the outer steps are the profit:</p>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Type</th><th>Shape</th><th>The idea, in words</th><th>Code</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Buy &amp; Sell</strong><br>I, II</td><td>buy → <span style="color:var(--llm)">manip</span> → sell</td><td>Push a token's price in one pool, then trade it favorably in another.</td><td><span class="code-ref">detector.py:72</span></td></tr>
+            <tr><td><strong>Deposit &amp; Borrow</strong><br>III, IV</td><td>deposit → <span style="color:var(--llm)">manip</span> → borrow</td><td>Inflate your collateral's reported value, then borrow more than it's worth. (Cream Finance, $130M.)</td><td><span class="code-ref">detector.py:217</span></td></tr>
+            <tr><td><strong>Stake &amp; Claim</strong><br>V, VI</td><td>stake → <span style="color:var(--llm)">manip</span> → claim</td><td>Distort the reward-pricing, then claim inflated rewards.</td><td><span class="code-ref">detector.py:497</span></td></tr>
+            <tr><td><strong>Deposit &amp; Withdraw</strong><br>VII, VIII</td><td>deposit → <span style="color:var(--llm)">manip</span> → withdraw</td><td>Deposit for a receipt token, move the price, redeem the receipt for more than you put in. (Harvest, $21.5M.)</td><td><span class="code-ref">detector.py:362</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The two patterns per type differ only in <em>when</em> the manipulation happens (before vs. between the profit steps). The key efficiency: the expensive LLM calls happen <strong>once per user call, up front</strong>; the triple-loop then reuses those cached directions with zero extra model calls — which is how a cubic combination count still runs in ~2.5s per transaction.</p>
+    </section>
+
+    <!-- ============ 7. EVALUATION ============ -->
+    <section id="eval">
+      <p class="kicker">How they prove it works &nbsp;·&nbsp; paper §VII</p>
+      <h2><span class="num">07</span>How the paper backs its claims — and how you'd evaluate your own tool</h2>
+      <p class="sub">For research, the evaluation design matters as much as the method. This is the part you will most directly reuse.</p>
+
+      <p>Two words first. <strong>Recall</strong> = of all the real attacks, what fraction did the tool catch? (Did it <em>miss</em> things?) <strong>Precision</strong> = of everything the tool flagged, what fraction were truly attacks? (Did it cry wolf?) A detector needs both high — you can get 100% recall trivially by flagging everything, at ruinous precision.</p>
+
+      <h3>Three datasets, three questions</h3>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Dataset</th><th>What it is</th><th>Question it answers</th></tr></thead>
+          <tbody>
+            <tr><td><strong>D1</strong> — 95 attacks</td><td>Real, confirmed price-manipulation hacks (pooled from DeFort, the DeFiHackLabs repo, and an industry partner)</td><td>Recall — how many real attacks get caught</td></tr>
+            <tr><td><strong>D2</strong> — 968 suspicious</td><td>Profitable-but-mixed transactions, deliberately including <em>other</em> attack types (reentrancy, access control…)</td><td>Precision — does it flag <em>only</em> price manipulation</td></tr>
+            <tr><td><strong>D3</strong> — 96,800 benign</td><td>Everyday transactions from top DeFi apps, at a realistic 1:100 suspicious-to-benign ratio</td><td>False alarms on normal traffic</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The headline numbers, and what they mean</h3>
+      <ul>
+        <li><strong>80% recall on D1</strong> — caught 76 of 95, vs 52.6% (DeFort), 51.6% (DeFiRanger), 35.8% (DeFiTainter). Those three are the prior state of the art; beating all of them is the core result (RQ1).</li>
+        <li><strong>96% precision on D2</strong> — 147 of 153 flags were genuine, and 81 were previously-undocumented incidents.</li>
+        <li><strong>Zero false alarms on 96,800 benign transactions</strong> — the practicality result (RQ3), at ~2.5s and ~$0.01 per transaction.</li>
+      </ul>
+
+      <h3>The ablation — the experiment that isolates the idea</h3>
+      <p>An <strong>ablation</strong> removes one ingredient to measure its contribution. Here: run the identical pipeline with the model <em>un-fine-tuned</em> vs <em>fine-tuned</em>. This is the single most important table for you, because it's the evidence that <em>fine-tuning</em> — not merely "using an LLM" — is what does the work:</p>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>Recall (D1)</th><th>On custom price models</th></tr></thead>
+          <tbody>
+            <tr><td>GPT-3.5, no fine-tuning</td><td>61%</td><td>60%</td></tr>
+            <tr><td>GPT-3.5, <strong>fine-tuned</strong> (shipped)</td><td><strong>80%</strong></td><td><strong>93.3%</strong></td></tr>
+            <tr><td>GPT-4o, fine-tuned</td><td>79%</td><td>96.7%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Read the middle row against the top: fine-tuning on <em>CPMM-only</em> data pushed custom-price-model detection from 60% → 93.3% — the transfer-learning claim, in one number. And cheap fine-tuned GPT-3.5 matches expensive fine-tuned GPT-4o, which is why they ship the cheap one. They confirm the gains are statistically significant with a <strong>McNemar test</strong> (p &lt; 0.05) — the standard test for comparing two classifiers on the same set of cases.</p>
+
+      <div class="rail danger">
+        <span class="tag">Limitations the paper admits — your research openings</span>
+        <p>DeFiScope <strong>misses cross-transaction attacks</strong> (it analyses one transaction at a time; 8 of the 11 "detectable but missed" cases were multi-transaction), <strong>struggles when pricing needs heavy arithmetic</strong> (LLMs are weak at exact computation — a suggested fix is letting the model write and run a script), and <strong>needs source code</strong> (closed-source contracts fall back to the CPMM assumption). Each of these is a legitimate "next paper" if you want to build on it.</p>
+      </div>
+    </section>
+
+    <!-- ============ 8. REPRO ============ -->
+    <section id="repro">
+      <p class="kicker">Answering your real question</p>
+      <h2><span class="num">08</span>Did the authors hide something? What's real, what's missing</h2>
+      <p class="sub">You suspected the materials might not run or might be incomplete. Here's the honest audit — verified by actually running it on 2026-07-05.</p>
+
+      <p>Short version: <strong>the deterministic pipeline genuinely works</strong> and the datasets check out, but the paper's <em>headline LLM results are not reproducible from the repo alone</em> — not from malice, but because the crucial learned artifact lives on someone else's server and the data-synthesis code was never shipped. Two categories:</p>
+
+      <h3>Blockers that stop a fresh clone from running (now fixed in your copy)</h3>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Issue</th><th>Effect</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Hard-coded private model <code>ft:…metatrust-labs…</code></td><td>Any other key → "model not found", silently → all-benign</td><td><span class="st part">env var now</span></td></tr>
+            <tr><td><code>torch</code> imported unconditionally, absent from requirements</td><td>Crash on import, even in OpenAI mode</td><td><span class="st ok">lazy import</span></td></tr>
+            <tr><td>No <code>OPENAI_API_KEY</code> → crash</td><td>Couldn't run at all without a key</td><td><span class="st ok">checking mode</span></td></tr>
+            <tr><td>Etherscan/BscScan <strong>V1 API retired in 2025</strong></td><td>No contract source → no Type-I prompts, for everyone</td><td><span class="st part">V2 rewrite*</span></td></tr>
+            <tr><td>Device hard-coded <code>cuda:0</code></td><td>Local model crashed on Mac/CPU</td><td><span class="st ok">auto-detect</span></td></tr>
+            <tr><td>Poisoned trace cache, <code>exit()</code> in libraries, <code>httpx</code> break</td><td>Assorted silent failures</td><td><span class="st ok">fixed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="footnote">*V2 still needs a free Etherscan key. Without one, detection runs but only in Type-II (CPMM) mode. Full details &amp; the run recipe are in <code>REPRODUCTION.md</code> in the repo.</p>
+
+      <h3>Genuinely missing artifacts (not fixable by editing code)</h3>
+      <ul>
+        <li><strong>The OpenAI fine-tuning recipe</strong> — no CSV→JSONL converter, no job script; and <code>gpt-3.5-turbo-1106</code> fine-tuning has since been retired, so the exact model can never be rebuilt. You <em>can</em> re-fine-tune a current base model from the shipped CSV (recipe in <code>REPRODUCTION.md</code>).</li>
+        <li><strong>The Foundry data-synthesis pipeline</strong> — only the finished training CSVs are shipped, not the fuzzer that made them.</li>
+        <li><strong><code>fine-tuning/lora_ds_config.json</code></strong> — referenced by the training script but absent; fine-tuning crashes without it. (Its contents are printed in <code>model_comparison_result.md</code>.)</li>
+        <li><strong>Ground-truth labels</strong> for D2 / D3 / the TG-vs-CFT experiment — so the 96% precision and TPR 0.912 can't be recomputed from the repo.</li>
+        <li><strong>No batch harness</strong> — <code>main.py</code> takes one transaction; nothing loops over the datasets.</li>
+      </ul>
+      <p>None of this contradicts the paper's claims — it just means "code + data on GitHub" is not the same as "end-to-end reproducible", a distinction worth carrying into your own RQ3 work.</p>
+    </section>
+
+    <!-- ============ 8. BUILD ============ -->
+    <section id="build">
+      <p class="kicker">For your own research</p>
+      <h2><span class="num">09</span>If you want to build something like this</h2>
+      <p class="sub">The transferable recipe, distilled from what DeFiScope does well.</p>
+      <ol>
+        <li><strong>Find the one sub-problem code can't solve.</strong> Here it's "read arbitrary pricing Solidity and infer price direction." Everything else stayed deterministic. Your LLM footprint should be embarrassingly small.</li>
+        <li><strong>Constrain the output to something machine-checkable.</strong> Four 1–10 scores on paired opposing statements — not free text. The pairing is a built-in consistency check, and the argmax has no fragile threshold.</li>
+        <li><strong>Bias failure toward safe.</strong> Any uncertainty → UNCERTAIN → "no attack." On a stream that's 99% benign, you want misfires to be false negatives, not false alarms.</li>
+        <li><strong>Fine-tune for format reliability and transferable reasoning.</strong> Use CoT targets so the model learns the <em>derivation</em>; generate labels programmatically (fuzzing gave free ground truth) so you're not hand-labeling.</li>
+        <li><strong>Compress the input.</strong> Don't paste raw data; distill it to the few facts the model needs. This controls both cost and the context window.</li>
+        <li><strong>Log the raw model output and treat every call as fallible.</strong> The one anti-pattern to <em>avoid</em>: silently converting API errors to a neutral answer. Distinguish "model said no" from "model never answered."</li>
+      </ol>
+      <div class="rail det">
+        <span class="tag">Try it yourself, free</span>
+        <p>In your fixed clone: <code>unset OPENAI_API_KEY &amp;&amp; python main.py -tx 0xca4d0d24aa448329b7d4eb81be653224a59e7b081fc7a1c9aad59c5a38d0ae19 -bp bsc</code>, then read <code>prompts_dump/</code>. You'll watch the deterministic pipeline turn a raw hash into the exact questions the LLM would be asked — the best way to feel the architecture in your hands.</p>
+      </div>
+    </section>
+
+    <!-- ============ 9. GLOSSARY ============ -->
+    <section id="glossary" style="border-bottom:none;">
+      <p class="kicker">Keep this nearby</p>
+      <h2><span class="num">10</span>Pocket glossary</h2>
+      <div class="two">
+        <div class="card"><h4>Token</h4><p>Sub-word chunk of text (~¾ word) the model reads; the billing unit. <span style="color:var(--muted)">gen_with_local_model.py</span></p></div>
+        <div class="card"><h4>Context window</h4><p>Max tokens per request. Phi-3-medium-128k → 128,000.</p></div>
+        <div class="card"><h4>Prompt</h4><p>The single text string you send. Built by string concatenation. <span style="color:var(--muted)">priceChangeInference.py</span></p></div>
+        <div class="card"><h4>System / user message</h4><p>Standing instruction vs. the per-request task, sent as roles.</p></div>
+        <div class="card"><h4>Temperature</h4><p>Randomness dial. 0 = deterministic (what a detector needs).</p></div>
+        <div class="card"><h4>Fine-tuning (SFT)</h4><p>Continue training a base model on your own (input, output) pairs so it defaults to your task.</p></div>
+        <div class="card"><h4>Chain-of-Thought (CoT)</h4><p>Training/asking the model to reason step by step <em>before</em> answering. Improves and generalizes reasoning.</p></div>
+        <div class="card"><h4>LoRA</h4><p>Freeze the big model, train tiny adapter matrices on a few layers. Cheap, portable fine-tuning. <span style="color:var(--muted)">r=4</span></p></div>
+        <div class="card"><h4>Label masking (-100)</h4><p>Ignore prompt tokens in the loss so the model learns only to produce the answer.</p></div>
+        <div class="card"><h4>Base vs. fine-tuned model</h4><p><code>gpt-3.5-turbo</code> vs. <code>ft:gpt-3.5-turbo-…:org::id</code> — the latter is a private specialized copy.</p></div>
+        <div class="card"><h4>Sensor / judge split</h4><p>LLM answers a narrow perception question; deterministic code makes every decision.</p></div>
+        <div class="card"><h4>Type-I / Type-II prompt</h4><p>With source code (extract the model) vs. without (assert CPMM). Routing is plain code.</p></div>
+        <div class="card"><h4>LLM (next-token predictor)</h4><p>A model that, given text, repeatedly predicts the next token. All its abilities are that loop, done well.</p></div>
+        <div class="card"><h4>Pretraining</h4><p>The first, huge training pass on internet text. Where the model learned English, Solidity, and x·y=k for free.</p></div>
+        <div class="card"><h4>Recall / precision</h4><p>Recall = fraction of real attacks caught. Precision = fraction of flags that are real. A detector needs both.</p></div>
+        <div class="card"><h4>Ablation</h4><p>Remove one ingredient (e.g. fine-tuning) to measure exactly what it contributes.</p></div>
+        <div class="card"><h4>Hallucination</h4><p>An LLM stating something false with full confidence. Why its output is untrusted text you must parse and check.</p></div>
+        <div class="card"><h4>Transfer Graph</h4><p>Transfers as timestamped edges; DeFi operations are graph shapes. Beats DeFiRanger's Cash Flow Tree. <span style="color:var(--muted)">transferGraph.py</span></p></div>
+      </div>
+      <p class="footnote" style="margin-top:32px;">Built by reading the DeFiScope repository end to end and running it on the AES attack transaction. Paired with <code>REPRODUCTION.md</code> (fixes &amp; run guide) in your working copy. All code and prompts shown are verbatim from the repo and its actual output.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeToggle');
+    var root = document.documentElement;
+    btn.addEventListener('click', function () {
+      var cur = root.getAttribute('data-theme');
+      if (!cur) {
+        cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+
+</body>
+</html>

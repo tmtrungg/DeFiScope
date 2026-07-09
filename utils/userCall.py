@@ -15,7 +15,7 @@ from utils.transferGraph import TransferGraph, Edge
 from utils.actionType import TransferActionType
 from utils.account import AccountType, Account
 from utils.flashLoan import FlashLoan
-from utils.config import SUPPORTED_NETWORK
+from utils.config import SUPPORTED_NETWORK, explorer_get
 
 PRICE_CALCULATION_KEYWORDS = [r"price", r"getAmount", r"latestAnswer", r"swap\w*For\w*", r"swap\w*To\w*", r"swap\w*From\w*", r"reward", r"mintFor", r"valueOf", r"get\w*Price", r"buy", r"purchase", r"sell", r"supply", r"performanceFee", r"wantLockedTotal", r"refresh", r"pledgein", r"joinswapPoolAmountIn", r"unstake", r"calcLiquidityShare", r"borrowSC", r"getTotalAvailableCollateralValue", r"cacheAssetPrice"]
 
@@ -451,12 +451,9 @@ class UserCall:
         return new_price_change_inference
             
     def record_contract_name(self, contract_address: str, platform: str):
-        explorer_api_key = SUPPORTED_NETWORK[platform]["api_key"]
-        api_prefix = SUPPORTED_NETWORK[platform]["api_prefix"]
-        abi_endpoint = \
-                    f"https://api{api_prefix}/api?module=contract&action=getsourcecode&address={contract_address}&apikey={explorer_api_key}"
+        # Etherscan V2 multichain endpoint (V1 retired in 2025). See utils/config.py.
         try:
-            ret = json.loads(requests.get(abi_endpoint).text)
+            ret = explorer_get(platform, "getsourcecode", address=contract_address)
             contract_name = ret["result"][0]["ContractName"]
             if not contract_name:
                 CONTRACT_NAME[contract_address] = "Unknown"

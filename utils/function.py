@@ -3,12 +3,20 @@ import re
 import json
 import shutil
 import requests
+import urllib.request
 from typing import List, Tuple, Optional
 from solc_select import solc_select
 from slither.slither import Slither
 from slither.core.declarations import Contract
 
-from utils.config import SUPPORTED_NETWORK
+# binaries.soliditylang.org (Cloudflare) returns 403 to the default "Python-urllib"
+# user agent from datacenter IPs (e.g. AWS), which breaks solc-select's on-demand
+# solc download. Install a global opener with a real UA so urlretrieve works.
+_opener = urllib.request.build_opener()
+_opener.addheaders = [("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) solc-select")]
+urllib.request.install_opener(_opener)
+
+from utils.config import SUPPORTED_NETWORK, explorer_url, explorer_get
 
 WHITE_LIST = ['SafeMath', 'PausableUpgradeable', 'OwnableUpgradeable', 'ContextUpgradeable', 'ReentrancyGuardUpgradeable', 'Initializable', 'AddressUpgradeable']
 STANDARD_CONTRACTS = ['IERC20', 'BEP20', 'IBEP20', 'SafeBEP20', 'Address', 'SafeMath', 'Math', 'AccessControlledOffchainAggregator', 'EACAggregatorProxy']
@@ -33,22 +41,84 @@ class Function:
         if self.contract_address in CONTRACT_CACHE:
             print("[i]Contract name (get from cache): {contract_name}".format(contract_name=CONTRACT_CACHE[self.contract_address]))
             return CONTRACT_CACHE[self.contract_address]
-        else:
-            self.download_contracts(contract_address=self.contract_address,platform=platform)
 
-            # @todo-done support other block explorer APIs
-            explorer_api_key = SUPPORTED_NETWORK[platform]["api_key"]
-            api_prefix = SUPPORTED_NETWORK[platform]["api_prefix"]
-            abi_endpoint = \
-                        f"https://api{api_prefix}/api?module=contract&action=getsourcecode&address={self.contract_address}&apikey={explorer_api_key}"
-            ret = json.loads(requests.get(abi_endpoint).text)
-            contract_name = ret["result"][0]["ContractName"]
+        # Primary path: one Etherscan V2 call returns both the contract name and
+        # its verified source; we write the (flattened) source straight to
+        # tmp/{address}/{name}.sol, which is what the Slither/brace extractor reads.
+        # This replaces the legacy `slither-flat` download, whose crytic-compile
+        # 0.3.7 backend only speaks the retired Etherscan V1 API.
+        contract_name, source = self.fetch_verified_source(platform, self.contract_address)
+        if contract_name and source:
             print("[i]Contract name: {contract_name}".format(contract_name=contract_name))
-
-            self.refactor_file_structure(self.contract_address, contract_name)
+            target_dir = os.path.join("tmp", self.contract_address)
+            os.makedirs(target_dir, exist_ok=True)
+            with open(os.path.join(target_dir, contract_name + ".sol"), "w", encoding="utf8") as f:
+                f.write(source)
             CONTRACT_CACHE[self.contract_address] = contract_name
-
             return contract_name
+
+        # Fallback: legacy slither-flat path (only works with a V2-capable
+        # crytic-compile; kept for users who upgrade the toolchain).
+        print("[!]V2 source fetch failed; falling back to slither-flat")
+        self.download_contracts(contract_address=self.contract_address, platform=platform)
+        ret = explorer_get(platform, "getsourcecode", address=self.contract_address)
+        contract_name = ret["result"][0]["ContractName"]
+        print("[i]Contract name: {contract_name}".format(contract_name=contract_name))
+        self.refactor_file_structure(self.contract_address, contract_name)
+        CONTRACT_CACHE[self.contract_address] = contract_name
+        return contract_name
+
+    def fetch_verified_source(self, platform: str, contract_address: str) -> Tuple[Optional[str], Optional[str]]:
+        """Fetch a contract's name + verified source via the Etherscan V2 API.
+
+        Returns (contract_name, flattened_source). For multi-file (standard
+        JSON-input) verifications, every file's content is concatenated into one
+        string - enough for the downstream brace-counting function extractor.
+        Returns (None, None) on any failure (unverified contract, no API key,
+        network error), so the caller can fall back.
+        """
+        try:
+            ret = explorer_get(platform, "getsourcecode", address=contract_address)
+            if ret.get("status") != "1" or not isinstance(ret.get("result"), list):
+                print("[!]Explorer getsourcecode error: {msg}".format(msg=ret.get("result") or ret.get("message")))
+                return (None, None)
+            entry = ret["result"][0]
+            name = entry.get("ContractName")
+            raw = entry.get("SourceCode") or ""
+            if not name or not raw:
+                return (None, None)
+            return (name, self._flatten_source(raw))
+        except Exception as e:
+            print("[!]fetch_verified_source failed: {e}".format(e=e))
+            return (None, None)
+
+    @staticmethod
+    def _flatten_source(raw: str) -> str:
+        """Normalize Etherscan's SourceCode field into a single Solidity string.
+
+        Etherscan returns one of three shapes:
+          (1) plain Solidity text (single-file verification),
+          (2) a JSON object {"path": {"content": ...}, ...},
+          (3) a standard-json-input object wrapped in DOUBLE braces
+              {{"language":..., "sources": {"path": {"content": ...}}}}.
+        """
+        stripped = raw.strip()
+        if stripped.startswith("{{") and stripped.endswith("}}"):
+            stripped = stripped[1:-1]  # unwrap the doubled braces
+        if stripped.startswith("{"):
+            try:
+                obj = json.loads(stripped)
+                sources = obj.get("sources", obj) if isinstance(obj, dict) else {}
+                parts = []
+                for path, val in sources.items():
+                    content = val.get("content") if isinstance(val, dict) else val
+                    if content:
+                        parts.append("// File: {path}\n{content}".format(path=path, content=content))
+                if parts:
+                    return "\n\n".join(parts)
+            except json.JSONDecodeError:
+                pass
+        return raw  # already plain Solidity
 
     def detect_and_switch_solc_version(self) -> None:
         target = os.path.join("tmp",self.contract_address,self.contract_name+".sol")
@@ -58,10 +128,19 @@ class Function:
             solc_versions = PATTERN.findall(buf)
         if not solc_versions:
             print("[!]No solc version found. Manual switching is required")
-            exit()
-        solc_version = solc_versions[0]
+            raise RuntimeError("No pragma solidity version found in {t}".format(t=target))
+        # A flattened multi-file source has one pragma per file and the first one
+        # may be a helper library's (e.g. ">=0.6.0" while the main contract needs
+        # 0.6.6 syntax) — compile with the highest version mentioned.
+        solc_version = max(solc_versions, key=lambda v: tuple(map(int, v.split("."))))
+        # current_version() raises on a fresh machine where no global version was
+        # ever set (empty ~/.solc-select); treat that as "no version" and install.
+        try:
+            current_version = solc_select.current_version()[0]
+        except Exception:
+            current_version = None
         # Current version is the same as the required version
-        if solc_version == solc_select.current_version()[0]:
+        if solc_version == current_version:
             pass
         # Switch to the required version (including installation if necessary)
         else:
@@ -69,15 +148,21 @@ class Function:
         # Check if the version is switched successfully
         if solc_select.current_version()[0] != solc_version:
             print("[!]Failed to switch to the required solc version")
-            exit()
+            raise RuntimeError("Failed to switch to solc {v}".format(v=solc_version))
         else:
             print("[+]Using solc version: {}".format(solc_version))
 
     def download_contracts(self, contract_address: str, platform: str) -> None:
         if self.contract_address in CONTRACT_CACHE:
             pass
+        api_key = SUPPORTED_NETWORK[platform]["api_key"]
+        if not api_key:
+            # Without a key the command would end in "--etherscan-apikey " and
+            # slither-flat's argparse would abort; skip instead of emitting junk.
+            print("[!]No explorer API key set; cannot run slither-flat fallback")
+            return
         command = "slither-flat {platform}:{address} --strategy OneFile {key_command} {api_key}".format(
-            platform=SUPPORTED_NETWORK[platform]["name"],address=contract_address,key_command=SUPPORTED_NETWORK[platform]["key_command"],api_key=SUPPORTED_NETWORK[platform]["api_key"])
+            platform=SUPPORTED_NETWORK[platform]["name"],address=contract_address,key_command=SUPPORTED_NETWORK[platform]["key_command"],api_key=api_key)
         os.system(command)
         print("[*]Downloaded contracts successfully")
 
@@ -104,13 +189,21 @@ class Function:
             print("[!]Contract {address}:{contract_name} not found: contract is not downloaded successfully.".format(address=self.contract_address, contract_name=self.contract_name))
             return (None, None)
         
-        self.detect_and_switch_solc_version()
-        
+        # A contract that fails to compile must not kill the whole transaction —
+        # degrade to "no source" (Type-II prompts) instead. Restore the cwd even
+        # when Slither raises, or every later relative path breaks.
         curr_dir = os.getcwd()
-        os.chdir(os.path.join("tmp",self.contract_address))
-        slither = Slither(self.contract_name+".sol")
-        os.chdir(curr_dir)
-        
+        try:
+            self.detect_and_switch_solc_version()
+            os.chdir(os.path.join("tmp", self.contract_address))
+            slither = Slither(self.contract_name + ".sol")
+        except Exception as e:
+            print("[!]Slither/solc failed on {address}:{name}; continuing without source. ({e})".format(
+                address=self.contract_address, name=self.contract_name, e=e))
+            return (None, None)
+        finally:
+            os.chdir(curr_dir)
+
         try:
             contracts = slither.get_contract_from_name(self.contract_name)
             contract = contracts[0]

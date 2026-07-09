@@ -120,7 +120,28 @@ You will be provided with some changes of variables in the price calculation mod
             @todo-done bind the price change tendency with specific contract/pool address
         """
         print("[+]Start price change inference")
-        client = OpenAI()
+        use_local_model = bool(self.model and self.tokenizer and self.device)
+
+        # No-LLM checking mode: without an API key or a local model we cannot score
+        # the statements, but the rest of the pipeline (decoding, transfer graph,
+        # DeFi operations, pattern matching) can still be exercised. Dump the prompt
+        # that would have been sent so it can be inspected offline.
+        if not use_local_model and not os.environ.get("OPENAI_API_KEY"):
+            (prompt, statements) = self.generate_prompt()
+            dump_dir = "prompts_dump"
+            os.makedirs(dump_dir, exist_ok=True)
+            dump_path = os.path.join(dump_dir, "prompt_{h}.txt".format(h=abs(hash(prompt)) % 10**8))
+            with open(dump_path, "w") as f:
+                f.write(prompt)
+            print("[!]OPENAI_API_KEY not set: skipping LLM scoring (tendency=Uncertain), prompt saved to {p}".format(p=dump_path))
+            return {token: Tendency.UNCERTAIN for token in self.token_address_list}
+
+        # DEFISCOPE_OPENAI_BASE_URL lets you point the OpenAI client at any
+        # OpenAI-compatible server instead of api.openai.com - e.g. a local Ollama
+        # (http://localhost:11434/v1) to run Phi-3/Llama locally with no API cost.
+        # Ollama ignores the API key, so set OPENAI_API_KEY to any placeholder.
+        _base_url = os.environ.get("DEFISCOPE_OPENAI_BASE_URL")
+        client = OpenAI(base_url=_base_url) if not use_local_model else None
 
         retry = 0
         retry_limit = 2
@@ -230,8 +251,11 @@ You will be provided with some changes of variables in the price calculation mod
     def get_evaluation_score(self, client: OpenAI) -> Tuple[List[int], List[str], ChatCompletion]:
         temperature = 0
         top_p = 1
-        model = "ft:gpt-3.5-turbo-1106:metatrust-labs::8zFctmxs" # Fine-tuned model
-        # model = "gpt-3.5-turbo" #@test Original model
+        # The authors' fine-tuned model "ft:gpt-3.5-turbo-1106:metatrust-labs::8zFctmxs"
+        # is private to their OpenAI org and cannot be used by anyone else.
+        # Set DEFISCOPE_OPENAI_MODEL to your own fine-tuned model id (ft:...) if you
+        # reproduced the fine-tuning; otherwise the public base model is used.
+        model = os.environ.get("DEFISCOPE_OPENAI_MODEL", "gpt-3.5-turbo")
 
         (prompt, statements) = self.generate_prompt()
         if self.model and self.tokenizer and self.device:

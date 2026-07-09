@@ -1,0 +1,14 @@
+# Ollama Modelfile for the fine-tuned DeFiScope Phi-3 model.
+# Build the GGUF first with build_defiscope_phi3_gguf.ipynb, drop it in this folder,
+# then:  ollama create defiscope-phi3 -f Modelfile
+#
+# The Phi-3 chat template is embedded in the GGUF metadata, so Ollama applies it
+# automatically. DeFiScope sends temperature=0 / top_p=1 per request anyway; these
+# defaults match so runs are deterministic.
+
+FROM ./defiscope-phi3-Q4_K_M.gguf
+
+PARAMETER temperature 0
+PARAMETER top_p 1
+# 128k-context model, but DeFiScope prompts are short; cap context to save RAM.
+PARAMETER num_ctx 8192

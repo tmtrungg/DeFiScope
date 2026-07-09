@@ -4,7 +4,6 @@ import shutil
 import argparse
 import jsonlines
 from itertools import combinations
-import torch
 
 from utils.transaction import Transaction
 from utils.detector import Detector
@@ -15,7 +14,6 @@ from utils.checkFlashloan import flagFlashloan
 from utils.matchRelatedActions import matchRelatedActions
 from utils.multiThreadHelper import multi_thread, multi_thread_cuda
 from utils.fast_filter import fast_filter
-from utils.load_model import load_model_for_device
 
 # run nano ~/.bash_profile, write: export OPENAI_API_KEY='your-api-key-here'
 # run source ~/.bash_profile to import openAI API key first
@@ -57,16 +55,41 @@ use_local_model = args.use_local_model
 if use_local_model:
     if args.model_path is None:
         raise ValueError("Please provide a model path when using --use_local_model.")
+    # torch/transformers are only needed for local-model inference, so import lazily
+    import torch
+    from utils.load_model import load_model_for_device
     model_path = args.model_path
-    device = torch.device("cuda:0") # Ajust this based on your env
+    # Auto-detect the best available device (CUDA GPU, Apple-Silicon MPS, or CPU)
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    print("[*]Using device: {d}".format(d=device))
 else:
     model_path = None
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("[!]OPENAI_API_KEY is not set: running in NO-LLM checking mode.")
+        print("   The pipeline (decoding, transfer graph, DeFi operations, pattern matching)")
+        print("   still runs; LLM price-change scores default to 'Uncertain' and the prompts")
+        print("   that would have been sent are dumped to prompts_dump/ for inspection.")
 
 start_time = time.time()
 result = ""
 
-if fast_filter(tx=txhash, chain=platform):
+# fast_filter makes a network RPC call, so guard it: a bad endpoint / rate limit
+# should record an Error, not crash before anything is written.
+try:
+    filtered_out = fast_filter(tx=txhash, chain=platform)
+except Exception as e:
+    print("[!]fast_filter failed (RPC error?): {e}".format(e=e))
+    filtered_out = None
+
+if filtered_out is True:
     result = "False"
+elif filtered_out is None:
+    result = "Error"
 else:
     # Initialization
     if os.path.exists("tmp"):
@@ -99,9 +122,9 @@ else:
         else:
             multi_thread(userCalls)
 
-        filtered_userCalls = [userCall 
-                            for userCall in userCalls 
-                            if userCall.userCallPurpose or any(userCall.priceChangeInference.values())]
+        filtered_userCalls = [userCall
+                            for userCall in userCalls
+                            if userCall.userCallPurpose or any((userCall.priceChangeInference or {}).values())]
         
         # Print debug information
         if debug_mode:

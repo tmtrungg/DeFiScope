@@ -4,3 +4,7 @@ solc-select==1.0.4
 slither-analyzer==0.10.3
 crytic-compile==0.3.7
 openai==1.9.0
+# openai==1.9.0 breaks with httpx>=0.28 ("proxies" kwarg removed); pin a compatible httpx.
+httpx==0.27.2
+# cbor2's newest release needs a Rust 2024 toolchain to build from source; pin a wheel.
+cbor2==5.6.5
