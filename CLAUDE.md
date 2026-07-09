@@ -17,6 +17,14 @@ This clone has **local fixes applied** to make it runnable in 2026 (the upstream
 does not run out of the box). All fixes are documented in `REPRODUCTION.md`.
 `TEACHING_GUIDE.html` is a from-zero explainer of the paper + LLM concepts.
 
+**Research framing:** the baseline is the **released fine-tuned Phi-3 only**
+(paper Table VI, recall 0.66 on D1) — the 0.80 GPT-3.5 headline is private and
+unreproducible. The domain-knowledge → fine-tuning → 0.66 chain and the
+experiment plan live in **`RQ3_BASELINE_NOTES.md`**; read it before designing
+any experiment. Git remotes: `origin` = private `tmtrungg/DeFiScope` (push
+here), `upstream` = authors' `AIS2Lab/DeFiScope` (never push). Secrets
+(`*.pem`, `.claude/`, `.env`) are gitignored — keep it that way.
+
 ## Core architecture — "LLM as sensor, plain code as judge"
 
 The single most important thing to understand. The LLM is asked **one narrow
@@ -115,6 +123,7 @@ Full setup, keys, modes, and troubleshooting: **`how_to_use.md`**.
 
 ## Docs in this repo
 
+- `RQ3_BASELINE_NOTES.md` — the research plan + the paper's domain-knowledge → fine-tuning → 0.66 chain (read before experiments)
 - `how_to_use.md` — setup + run manual (start here to run it)
 - `REPRODUCTION.md` — every blocker, every fix, + a recipe to re-fine-tune your own model
 - `TEACHING_GUIDE.html` — from-zero explainer of the paper and LLM concepts (open in a browser)
